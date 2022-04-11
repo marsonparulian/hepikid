@@ -4,7 +4,7 @@
   "description": "Tools for Hepikid",
   "main": "index.js",
   "scripts": {
-    "build": "swc",
+    "build": "swc src -d dist",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -18,7 +18,9 @@
     "url": "https://github.com/marsonparulian/hepikid/issues"
   },
   "homepage": "https://github.com/marsonparulian/hepikid#readme",
-  "dependencies": {},
+  "dependencies": {
+    "@swc/cli": "^0.1.57"
+  },
   "devDependencies": {
     "@swc/core": "^1.2.151",
     "@types/node": "^17.0.21",
