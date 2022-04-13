@@ -2,3 +2,5 @@
 node_modules/
 dist
 logs
+# Browsing data to save user session
+user_Data
