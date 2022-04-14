@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node -r @swc-node/register src/index2.ts",
+    "start:dev": "node -r @swc-node/register src/index.ts",
     "build": "swc src -d dist",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
