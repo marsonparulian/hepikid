@@ -10,7 +10,7 @@ puppeteer.launch({
     userDataDir: "./user_data"
 }).then((browser: Browser) => {
     const productBooster = new ProductBooster(browser);
-    productBooster.execute();
+    return productBooster.execute();
 }).catch(e => {
     console.error(e);
 });
