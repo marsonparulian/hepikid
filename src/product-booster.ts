@@ -86,11 +86,11 @@ class ProductBooster {
             if (isProductStillBoosted) {
                 console.log('This product is still boosted. Immediately check the next product');
                 this.#toNextProductIndex();
-                nextBoostTimeout = 2; // Immediately.
+                nextBoostTimeout = 1; // Immediately.
             } else {
                 // If there are no  `boostButton` found in whole page, that means `ProductBooster.MaxBoostedConcurrently` has been reached.
                 // Then wait for 5 minutes before try to boost again for the same product (do not increment the product index)
-                const numberOfBoostButtonsOnThePage = await page.$$eval('${generalBoostButtonSelector', elements => elements.length);
+                const numberOfBoostButtonsOnThePage = await page.$$eval(`${generalBoostButtonSelector}`, elements => elements.length);
 
                 if (numberOfBoostButtonsOnThePage == 0) {
                     nextBoostTimeout = 5 * 60;
