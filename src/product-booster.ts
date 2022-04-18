@@ -65,14 +65,10 @@ class ProductBooster {
             const dropdownClickableSelector = `${productSelector}  .product-action .shopee-dropdown button`;
             log(`'lainnya' button selector: ${dropdownClickableSelector} `);
             await page.click(dropdownClickableSelector);
+            await page.waitForTimeout(500);  // Wait until dropdown animation completely finished.
 
             // Define & wait for `boosButtonSelector`
             const generalBoostButtonSelector = '.boost-button-text';
-            const boostButtonSelector = `${productSelector}  ${generalBoostButtonSelector}`;
-            log(`boostButtonSelector: ${boostButtonSelector} `);
-            await page.waitForSelector(boostButtonSelector);
-            await page.waitForTimeout(500);  // Wait until dropdown animation completely finished.
-            console.log("boostButton is loaded / visible");
 
             // Timeout for the next boost
             let nextBoostTimeout = ProductBooster.boostInterval;
@@ -96,6 +92,12 @@ class ProductBooster {
                     nextBoostTimeout = 5 * 60;
                     log('Reached the `ProductBooster.MaxBoostedConcurrently`. Wait for 5 minutes before retry.');
                 } else {
+                    // Verify the `Naikan produk` (boost button) exist.
+                    const boostButtonSelector = `${productSelector}  ${generalBoostButtonSelector}`;
+                    log(`boostButtonSelector: ${boostButtonSelector} `);
+                    await page.waitForSelector(boostButtonSelector);
+                    console.log("boostButton is loaded / visible");
+
                     // Click the `Naikkan produk` link
                     await page.click(boostButtonSelector);
                     this.#toNextProductIndex();
