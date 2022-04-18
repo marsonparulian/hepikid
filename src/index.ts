@@ -5,7 +5,8 @@ import ProductBooster from './product-booster';
 
 // Execute `ProductBooster`
 puppeteer.launch({
-    headless: false,
+    // headless: false,
+    headless: process.env.BROWSER_HEADLESS ? true : false,
     slowMo: 50, // slow down by 50ms 
     userDataDir: "./user_data"
 }).then((browser: Browser) => {
