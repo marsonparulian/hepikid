@@ -10,13 +10,13 @@ class ProductBooster {
     // Next product index to boost from list on web page
     #nextIndexToBoost: number = 0;
     // Total products to boost
-    #totalProductsToBoost: number = 7;
+    static totalProductsToBoost: number = 7;
     // Maximum number of concurrently boosted products .
     static MaxBoostedConcurrently: number = 5;
     // How long the boostedproduct will last until can be boosted again (in seconds)
-    #boostedDuration = 4 * 60 * 60; // 4 hours
+    static boostedDuration = 4 * 60 * 60; // 4 hours
     // Boost interval, elapsed boost time between products, in seconds
-    #boostInterval: number = Math.ceil(this.#boostedDuration / ProductBooster.MaxBoostedConcurrently);
+    static boostInterval: number = Math.ceil(ProductBooster.boostedDuration / ProductBooster.MaxBoostedConcurrently);
     constructor(browser: Browser) {
         this.#browser = browser;
         // this.#boostInterval = Math.ceil(this.#boostedDuration / ProductBooster.MaxBoostedConcurrently);
@@ -74,13 +74,13 @@ class ProductBooster {
             console.log("boostButton is loaded / visible");
 
             // Timeout for the next boost
-            let nextBoostTimeout = this.#boostInterval;
+            let nextBoostTimeout = ProductBooster.boostInterval;
 
             // Check is this product is still 'boosted'. Note : If a product is still in 'boosted' perode, it will show the timer, with specific HTML class, in the drop down.
             const isProductStillBoosted = await page.$(`${productSelector}  .count-cool`) === null ? false : true;
             // If this product is still boosted, Immediately check the next product until the end of product (`#totalProductToBoost).
             // If all products are still boosted, wait with a normal timeout to check the first product
-            if (isProductStillBoosted && (this.#nextIndexToBoost + 1) < this.#totalProductsToBoost) {
+            if (isProductStillBoosted && (this.#nextIndexToBoost + 1) < ProductBooster.totalProductsToBoost) {
                 console.log('This product is still boosted. Immediately check the next product');
                 nextBoostTimeout = 2; // Immediately.
             } else {
@@ -95,7 +95,7 @@ class ProductBooster {
             await page.waitForTimeout(600);
 
             // Prepare params fo the next `boostAProduct`
-            this.#nextIndexToBoost = (this.#nextIndexToBoost + 1) % this.#totalProductsToBoost;
+            this.#nextIndexToBoost = (this.#nextIndexToBoost + 1) % ProductBooster.totalProductsToBoost;
 
             // Schedule next `boostAProduct`
             setTimeout(() => {
