@@ -69,12 +69,13 @@ class ProductBooster {
 
             // Define & wait for `boosButtonSelector`
             const generalBoostButtonSelector = '.boost-button-text';
+            const countdownTimerSelector = '.count-cool';
 
             // Timeout for the next boost
             let nextBoostTimeout = ProductBooster.boostInterval;
 
             // Check is this product is still 'boosted'. Note : If a product is still in 'boosted' perode, it will show the timer, with specific HTML class, in the drop down.
-            const isProductStillBoosted = await page.$(`${productSelector}  .count-cool`) === null ? false : true;
+            const isProductStillBoosted = await page.$(`${productSelector}  ${countdownTimerSelector}`) === null ? false : true;
             // If this product is still boosted, Immediately check the next product until the end of product (`#totalProductToBoost).
             // If the number of boosted products has reached the limit (`ProductBooster.MaxBoostedConcurrently``), retry to boost the same product in 5 minutes.
 
@@ -84,11 +85,11 @@ class ProductBooster {
                 this.#toNextProductIndex();
                 nextBoostTimeout = 1; // Immediately.
             } else {
-                // If there are no  `boostButton` found in whole page, that means `ProductBooster.MaxBoostedConcurrently` has been reached.
+                // If there are no active `boostButton` found in whole page, that means `ProductBooster.MaxBoostedConcurrently` has been reached. Active`boostButton` is `boostButton` without the 'timer' selector.boost button
                 // Then wait for 5 minutes before try to boost again for the same product (do not increment the product index)
-                const numberOfBoostButtonsOnThePage = await page.$$eval(`${generalBoostButtonSelector}`, elements => elements.length);
+                const numberOfActiveBoostButtonsOnThePage = await page.$$eval(`${generalBoostButtonSelector}:not(${countdownTimerSelector})`, elements => elements.length);
 
-                if (numberOfBoostButtonsOnThePage == 0) {
+                if (numberOfActiveBoostButtonsOnThePage == 0) {
                     nextBoostTimeout = 5 * 60;
                     log('Reached the `ProductBooster.MaxBoostedConcurrently`. Wait for 5 minutes before retry.');
                 } else {
