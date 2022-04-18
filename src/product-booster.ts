@@ -59,18 +59,19 @@ class ProductBooster {
 
             // Parse the product name
             const productName = await page.$eval(`${productSelector} a.product-name-wrap`, el => el.textContent);
-            log(`Checking product : ${productName} `)
+            log(`Checking product #${this.#nextIndexToBoost + 1}: ${productName} `)
 
-            // Click `Lainnya` link
+            // Click `Lainnya` link (will triggerdropdown))
             const dropdownClickableSelector = `${productSelector}  .product-action .shopee-dropdown button`;
-            console.log(`'lainnya' button selector: ${dropdownClickableSelector} `);
+            log(`'lainnya' button selector: ${dropdownClickableSelector} `);
             await page.click(dropdownClickableSelector);
 
             // Define & wait for `boosButtonSelector`
-            const boostButtonSelector = `${productSelector} .boost-button-text`;
-            console.log(`boostButtonSelector: ${boostButtonSelector} `);
+            const generalBoostButtonSelector = '.boost-button-text';
+            const boostButtonSelector = `${productSelector}  ${generalBoostButtonSelector}`;
+            log(`boostButtonSelector: ${boostButtonSelector} `);
             await page.waitForSelector(boostButtonSelector);
-            await page.waitForTimeout(500);
+            await page.waitForTimeout(500);  // Wait until dropdown animation completely finished.
             console.log("boostButton is loaded / visible");
 
             // Timeout for the next boost
@@ -79,23 +80,34 @@ class ProductBooster {
             // Check is this product is still 'boosted'. Note : If a product is still in 'boosted' perode, it will show the timer, with specific HTML class, in the drop down.
             const isProductStillBoosted = await page.$(`${productSelector}  .count-cool`) === null ? false : true;
             // If this product is still boosted, Immediately check the next product until the end of product (`#totalProductToBoost).
-            // If all products are still boosted, wait with a normal timeout to check the first product
-            if (isProductStillBoosted && (this.#nextIndexToBoost + 1) < ProductBooster.totalProductsToBoost) {
+            // If the number of boosted products has reached the limit (`ProductBooster.MaxBoostedConcurrently``), retry to boost the same product in 5 minutes.
+
+            // IMPORTANT! It is assumed that `ProductBooster.totalProductsToBoost` > `ProductBooster.MaxBoostedConcurrently`
+            if (isProductStillBoosted) {
                 console.log('This product is still boosted. Immediately check the next product');
+                this.#toNextProductIndex();
                 nextBoostTimeout = 2; // Immediately.
             } else {
-                // Click the `Naikkan produk` link
-                await page.click(boostButtonSelector);
-                log('"naikkan produk" button is clicked');
+                // If there are no  `boostButton` found in whole page, that means `ProductBooster.MaxBoostedConcurrently` has been reached.
+                // Then wait for 5 minutes before try to boost again for the same product (do not increment the product index)
+                const numberOfBoostButtonsOnThePage = await page.$$eval('${generalBoostButtonSelector', elements => elements.length);
+
+                if (numberOfBoostButtonsOnThePage == 0) {
+                    nextBoostTimeout = 5 * 60;
+                    log('Reached the `ProductBooster.MaxBoostedConcurrently`. Wait for 5 minutes before retry.');
+                } else {
+                    // Click the `Naikkan produk` link
+                    await page.click(boostButtonSelector);
+                    this.#toNextProductIndex();
+                    log('"naikkan produk" button is clicked');
+                }
+
             }
 
             // Click again to close the drop down
             await page.click(dropdownClickableSelector);
-            // Wait so the dropdown completely gone.
+            // Wait so the dropdown's fade out animation completely finished
             await page.waitForTimeout(600);
-
-            // Prepare params fo the next `boostAProduct`
-            this.#nextIndexToBoost = (this.#nextIndexToBoost + 1) % ProductBooster.totalProductsToBoost;
 
             // Schedule next `boostAProduct`
             setTimeout(() => {
@@ -106,6 +118,9 @@ class ProductBooster {
         } catch (e) {
             console.error(e);
         }
+    }
+    #toNextProductIndex() {
+        this.#nextIndexToBoost = (this.#nextIndexToBoost + 1) % ProductBooster.totalProductsToBoost;
     }
 }
 
