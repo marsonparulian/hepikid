@@ -320,7 +320,7 @@ class ProductBooster {
             console.log(`Next boost attempt will be in ${printSeconds(nextAttemptTimeout)} (at ${printHourAndMinuteFromNow(nextAttemptTimeout)})`);
             console.log('\n');
         } catch (e) {
-            await screenshot(page, 'error_attempt-to-boost');
+            await screenshot(page, 'error_attempt-to-boost.png');
             console.error(e);
             console.error('Oops, something is wrong. Will redo the attempt in 4 seconds');
             console.log('\n');
