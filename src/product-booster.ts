@@ -5,6 +5,15 @@ import { exit } from "process";
 
 // This file contain `ProductBooster`, a sub application to boost product by web automation
 
+/**
+ *  Do screenshot
+ * @param {Page} page 
+ * @param fName  - File name
+ * @returns  {Promise<void>}
+ */
+function screenshot(page: Page, fName: string): Promise<any> {
+    return page.screenshot({ path: `logs/screenshots/${fName}` });
+}
 function log(msg: string) {
     console.log(`[Boost] ${msg} `);
 }
@@ -311,6 +320,7 @@ class ProductBooster {
             console.log(`Next boost attempt will be in ${printSeconds(nextAttemptTimeout)} (at ${printHourAndMinuteFromNow(nextAttemptTimeout)})`);
             console.log('\n');
         } catch (e) {
+            await screenshot(page, 'error_attempt-to-boost');
             console.error(e);
             console.error('Oops, something is wrong. Will redo the attempt in 4 seconds');
             console.log('\n');
