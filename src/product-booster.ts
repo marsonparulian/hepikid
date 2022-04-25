@@ -268,6 +268,9 @@ class ProductBooster {
             // Refresh page to refresh the countdown timers to the real remaining time.
             await this.refreshPage(page);
 
+            // Log product info
+        log(`Product #${this.#nextIndexToBoost + 1}, initiating boost sequence..`);
+
             // Parse countdown timers & convert to seconds. The values will be used in this code block.
             await this.parseCountdownTimers(page);
 
