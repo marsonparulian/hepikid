@@ -22,6 +22,15 @@ function printSeconds(seconds: number) {
         + (m ? `${m} minutes ` : '')
         + (`${s} seconds`);
 }
+/**
+ * Print time in the future with the format `hour:minute`
+ * @param {number} offsetInSeconds  - Time offset, to the future, in seconds.
+ * #return {string} - Representation in `hour:minute` format.
+ */
+function printHourAndMinuteFromNow(offsetInSeconds = 0): string {
+    const t = new Date(Date.now() + offsetInSeconds * 1000);
+    return `${t.getHours()}:${t.getMinutes()}`;
+}
 class ProductBooster {
     #browser: Browser;
     // Next product index to boost from list on web page
@@ -298,7 +307,7 @@ class ProductBooster {
             setTimeout(() => {
                 this.AttempToBoostThisProduct(page);
             }, nextAttemptTimeout * 1000);
-            console.log(`Next boost attempt will be in ${printSeconds(nextAttemptTimeout)}`);
+            console.log(`Next boost attempt will be in ${printSeconds(nextAttemptTimeout)} (at ${printHourAndMinuteFromNow(nextAttemptTimeout)})`);
             console.log('\n');
         } catch (e) {
             console.error(e);
