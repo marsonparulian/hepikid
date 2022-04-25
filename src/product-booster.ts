@@ -307,10 +307,18 @@ class ProductBooster {
             setTimeout(() => {
                 this.AttempToBoostThisProduct(page);
             }, nextAttemptTimeout * 1000);
+
             console.log(`Next boost attempt will be in ${printSeconds(nextAttemptTimeout)} (at ${printHourAndMinuteFromNow(nextAttemptTimeout)})`);
             console.log('\n');
         } catch (e) {
             console.error(e);
+            console.error('Oops, something is wrong. Will redo the attempt in 4 seconds');
+            console.log('\n');
+
+            // Try again
+            setTimeout(() => {
+                this.AttempToBoostThisProduct(page);
+            }, 4e3);
         }
     }
     private async parseCountdownTimers(page: Page) {
