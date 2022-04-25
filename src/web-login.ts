@@ -3,6 +3,9 @@ import 'dotenv/config';
 
 // This file contains helpers to automate puppeteer's page login to Shoppee seller center
 
+/**
+ *  Will do login process on web page, if shopee's login form is detected.
+  */
 const login = async (page: Page) => {
     // TODO Login if needed
     await page.goto("https://seller.shopee.co.id", {
@@ -15,13 +18,12 @@ const login = async (page: Page) => {
         // Login
         await fillAndSubmitLoginForm(page);
     } else {
-        console.log("Login form is not detected")
+        console.log('No login form s detected. Browser is already logged in');
     }
 
 }
 const isLoginFormExist = async (page: Page): Promise<boolean> => {
     const loginFormsCount = await page.$$eval("form#shop-login", elements => elements.length);
-    console.log(`loginFOrmCounts ${loginFormsCount}`);
 
     return loginFormsCount > 0;
 }
@@ -37,16 +39,9 @@ const fillAndSubmitLoginForm = async (page: Page) => {
 
     // Submit
     await page.click('form button');
-    await page.screenshot({ path: 'logs/screenshots/20.png' });
-
-
     await page.waitForNavigation();
     await page.screenshot({ path: 'logs/screenshots/30.png' });
     console.log(`URL #30.png : ${await page.url()}`);
-    // Button for verification
-    /*
-    <button class="WMREvW"><div class="_2a60oL"><svg width="25" height="24" fill="none"><path d="M10.77 12.527l2.413 2.37a2 2 0 002.803 0l5.561-5.463a2 2 0 000-2.853l-3.26-3.204a2 2 0 00-2.804 0l-1.772 1.74" stroke="#000" stroke-opacity=".54" stroke-width="1.5"></path><path d="M15.23 11.473l-2.413-2.37a2 2 0 00-2.803 0l-5.562 5.463a2 2 0 000 2.853l3.261 3.204a2 2 0 002.804 0l1.772-1.74" stroke="#000" stroke-opacity=".54" stroke-width="1.5"></path></svg></div><div class="_1e6qWr">Verifikasi melalui link</div></button>
-    */
 
     // Click `send verification` button
     const sendVerificationButtonSelector = '.WMREvW';
@@ -71,11 +66,18 @@ const fillAndSubmitLoginForm = async (page: Page) => {
         console.log("OK Button is not found");
     }
 
+    // we need to wait until user receive & click verify link on whatsapp.
+    // After verified by the user, the page will be directed to shopee seller's landing page.
+    // TODO Increase timeout to 70 seconds, and wait for selector of one of the elements on landing page.
+    await page.setDefaultNavigationTimeout(70e3);
     await page.waitForNavigation({ waitUntil: 'networkidle2' });
+    await page.setDefaultNavigationTimeout(30e3);
 
     await screenshot(page, '45.png');
     console.log(`URL #45.png : ${await page.url()}`);
+
 }
+
 
 function screenshot(page: Page, fName: string) {
 
