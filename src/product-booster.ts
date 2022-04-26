@@ -42,8 +42,8 @@ function printHourAndMinuteFromNow(offsetInSeconds = 0): string {
 }
 class ProductBooster {
     #browser: Browser;
-    // Next product index to boost from list on web page
-    #nextIndexToBoost: number = 0;
+    // Next product index to boost from list on web page. The value is set to `-1` to trigger function to find the starter index. The default value will be `0`;
+    #nextIndexToBoost: number = -1;
     // Total products to boost
     static totalProductsToBoost: number = 7;
     // Maximum number of concurrently boosted products .
@@ -268,8 +268,11 @@ class ProductBooster {
             // Refresh page to refresh the countdown timers to the real remaining time.
             await this.refreshPage(page);
 
+            // On first run, set the starter product index
+            if (this.#nextIndexToBoost < 0) await this.setStarterProductIndex(page);
+
             // Log product info
-        log(`Product #${this.#nextIndexToBoost + 1}, initiating boost sequence..`);
+            log(`Product #${this.#nextIndexToBoost + 1}, initiating boost sequence..`);
 
             // Parse countdown timers & convert to seconds. The values will be used in this code block.
             await this.parseCountdownTimers(page);
@@ -356,7 +359,34 @@ class ProductBooster {
             console.log(printSeconds(sec));
         });
     }
+    /**
+     * Set the product index to start the whole boosting iteration.
+     * The starter index is n where Product[n] is not boosted & Product[n-1] is boosted. Default is 0.
+     * @param page 
+     */
+    private async setStarterProductIndex(page: Page) {
+        // Remove the `.` (dot) from the selector
+        const timerClass = ProductBooster.generalCountdownTimerSelector.substring(1);
+        console.log(`timer class : ${timerClass}`);
+        // Iterate through all `boostButton`
+        console.log(`general selector : ${ProductBooster.generalBoosterButtonSelector}`);
+        this.#nextIndexToBoost = await page.$$eval(ProductBooster.generalBoosterButtonSelector, (elements, arg1: unknown, arg2: unknown) => {
+            const limit = typeof (arg1) === 'number' ? arg1 : 33;
+            const timerClass = typeof(arg2) === 'string' ? arg2 : 'count-cool';
+            let starterIndex = 0;
+            for (let i = 1; i < limit; i++) {
+                if (!elements[i].classList.contains(timerClass)
+                    && elements[i - 1].classList.contains(timerClass)) {
+                    starterIndex = i;
+                    break;
+                }
+            }
+            return starterIndex;
+        }, ProductBooster.totalProductsToBoost, timerClass);
 
+        console.log(`### product index : ${this.#nextIndexToBoost}`);
+        // exit(0);
+    }
 }
 
 
