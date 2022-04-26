@@ -184,7 +184,9 @@ class ProductBooster {
         // Verify the `Naikan produk` (boost button) exist.
         const boostButtonSelector = `${this.createProductSelector()}  ${ProductBooster.generalBoosterButtonSelector}`;
         console.log(`boost button selector : ${boostButtonSelector}`);
-        await page.waitForSelector(boostButtonSelector);
+        await page.waitForSelector(boostButtonSelector, { visible: true });
+        // Wait a little more
+        await page.waitForTimeout(1000);
         console.log(`boostButton is loaded / visible : ${boostButtonSelector}`);
 
         // Click the `Naikkan produk` link
@@ -372,7 +374,7 @@ class ProductBooster {
         console.log(`general selector : ${ProductBooster.generalBoosterButtonSelector}`);
         this.#nextIndexToBoost = await page.$$eval(ProductBooster.generalBoosterButtonSelector, (elements, arg1: unknown, arg2: unknown) => {
             const limit = typeof (arg1) === 'number' ? arg1 : 33;
-            const timerClass = typeof(arg2) === 'string' ? arg2 : 'count-cool';
+            const timerClass = typeof (arg2) === 'string' ? arg2 : 'count-cool';
             let starterIndex = 0;
             for (let i = 1; i < limit; i++) {
                 if (!elements[i].classList.contains(timerClass)
