@@ -82,64 +82,6 @@ class ProductBooster {
         this.AttempToBoostThisProduct(page);
         console.log('\n');
     }
-    /**
-    * Boost a product. Will schedule the next `boostAProduct`.
-    * 
-    */
-    async boostAProduct(page: Page) {
-        try {
-            // Background : After we click a boost button, a countdown timer shows up. If there are 5 timer (5 products currently boosted) other products will not have the button to boost the corresponding product.
-            // Problem : If we keep the browser opened, those timers eventually will be slower than the actual time (maybe caused by the used of `setTimeout`). So in 4 hours, we will not be able to boost the next product because there are still some minutes in the supposed-to-be-finish timer.
-            // Solution : In each iteration, open other random page, go back to the product page then do the boost process. This will refresh the timers so the timers will have the actual remaining time.
-            await this.refreshPage(page);
-
-            // Create the CSS selector for the product. Will serve as context.
-            const productSelector = `.product-list-card:nth-of-type(${this.#nextIndexToBoost + 1})`
-
-            // Parse the product name
-            const productName = await page.$eval(`${productSelector} a.product-name-wrap`, el => el.textContent);
-            log(`Checking product #${this.#nextIndexToBoost + 1}: ${productName} `)
-
-            // Define & wait for `boosButtonSelector`
-            const generalBoostButtonSelector = '.boost-button-text';
-            const countdownTimerSelector = '.count-cool';
-
-            // Timeout for the next boost. Default value is the `boostInterval`
-            let nextBoostTimeout = await this.#calculateNextBoostFromNowToMatchInterval(page);
-
-
-            // If this product is still boosted, Immediately check the next product until the end of product (`#totalProductToBoost).
-            // If the number of boosted products has reached the limit (`ProductBooster.MaxBoostedConcurrently``), retry to boost the same product in 5 minutes.
-
-            // IMPORTANT! It is assumed that `ProductBooster.totalProductsToBoost` > `ProductBooster.MaxBoostedConcurrently`
-            if (await this.isThisProductCurrentlyBoosted(page)) {
-                console.log('This product is still boosted. Immediately check the next product');
-                this.#toNextProductIndex();
-                nextBoostTimeout = 1; // Immediately.
-            } else {
-                // If there are no active `boostButton` found in whole page, that means `ProductBooster.MaxBoostedConcurrently` has been reached. Active`boostButton` is `boostButton` without the 'timer' selector.boost button
-                const numberOfReadyBoostButtonsOnThePage = await page.$$eval(`${generalBoostButtonSelector}:not(${countdownTimerSelector})`, elements => elements.length);
-
-                if (numberOfReadyBoostButtonsOnThePage == 0) {
-                    log('Number of boosted roducts currently at maximum capacity. ');
-                } else {
-
-                    await this.clickTheBoostButton(page);
-                }
-
-            }
-
-            // Schedule next `boostAProduct`
-            setTimeout(() => {
-                this.boostAProduct(page);
-            }, nextBoostTimeout * 1000);
-            console.log(`Next boost will start in ${nextBoostTimeout} seconds`);
-            console.log('\n');
-
-        } catch (e) {
-            console.error(e);
-        }
-    }
     private isNoProductsCurrentlyBoosted(): boolean {
         const result = this.#countdownDimersInSeconds.length == 0;
 
@@ -311,8 +253,6 @@ class ProductBooster {
                     // Schedule the next attempt : after `boostInterval` on the last countdownTimer 
                     nextAttemptTimeout = secondsToFulfillInterval;
                 } else {
-                    console.log('Boost the product : Catched by the default case');
-
                     // Boost this product 
                     await this.clickTheBoostButton(page);
                     nextAttemptTimeout = ProductBooster.boostInterval;
@@ -346,8 +286,6 @@ class ProductBooster {
                 return text;
             });
         });
-        // if (!timersValueString) timersValueString = [];
-        console.log(`Parsed countdown timers : ${timersValueString}`);
 
         // Convert to number in seconds
         this.#countdownDimersInSeconds = timersValueString.map((arr) => {
@@ -369,9 +307,7 @@ class ProductBooster {
     private async setStarterProductIndex(page: Page) {
         // Remove the `.` (dot) from the selector
         const timerClass = ProductBooster.generalCountdownTimerSelector.substring(1);
-        console.log(`timer class : ${timerClass}`);
         // Iterate through all `boostButton`
-        console.log(`general selector : ${ProductBooster.generalBoosterButtonSelector}`);
         this.#nextIndexToBoost = await page.$$eval(ProductBooster.generalBoosterButtonSelector, (elements, arg1: unknown, arg2: unknown) => {
             const limit = typeof (arg1) === 'number' ? arg1 : 33;
             const timerClass = typeof (arg2) === 'string' ? arg2 : 'count-cool';
@@ -385,9 +321,7 @@ class ProductBooster {
             }
             return starterIndex;
         }, ProductBooster.totalProductsToBoost, timerClass);
-
-        console.log(`### product index : ${this.#nextIndexToBoost}`);
-        // exit(0);
+        console.log(`### starter product index : ${this.#nextIndexToBoost}`);
     }
 }
 
