@@ -274,12 +274,12 @@ class ProductBooster {
         } catch (e) {
             await screenshot(page, 'error_attempt-to-boost.png');
             console.error(e);
-            console.error('Oops, something is wrong. Will redo the attempt in 4 seconds');
+            console.error('Oops, something is wrong. Will redo the attempt in 40 minutes');
             console.log('\n');
             // Try again
             setTimeout(() => {
                 this.AttempToBoostThisProduct(page);
-            }, 4e3);
+            }, 40 * 60e3);
         }
     }
     private async parseCountdownTimers(page: Page) {
