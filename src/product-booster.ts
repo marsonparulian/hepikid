@@ -15,7 +15,7 @@ function screenshot(page: Page, fName: string): Promise<any> {
     return page.screenshot({ path: `logs/screenshots/${fName}` });
 }
 function log(msg: string) {
-    console.log(`[Boost] ${msg} `);
+    console.log(`~ ${msg} `);
 }
 /**
  * Display value of seconds to a formatted string (h:m:s)
@@ -42,6 +42,9 @@ function printHourAndMinuteFromNow(offsetInSeconds = 0): string {
 }
 class ProductBooster {
     #browser: Browser;
+    // Variables below represents a periode of time in milliseconds, Will be used such as for timeout to wait for animation or before `click`.
+    static SHORT_TIME: number = 2e3; // e.g.: wait little animation
+    static TINY_TIME: number = 7e2; //  e.g.: wait for element focus
     // Next product index to boost from list on web page. The value is set to `-1` to trigger function to find the starter index. The default value will be `0`;
     #nextIndexToBoost: number = -1;
     // Total products to boost
@@ -58,7 +61,7 @@ class ProductBooster {
     static generalBoosterButtonSelector: string = '.boost-button-text';
     // Selector for `countdownTimer` elements
     static generalCountdownTimerSelector: string = '.count-cool';
-    // Selector for index row /card
+    // Selector for HTML element that holds 1 product by index (row / card).
     private createProductSelector(): string {
         return `.product-list-card:nth-of-type(${this.#nextIndexToBoost + 1})`;
     }
@@ -76,9 +79,9 @@ class ProductBooster {
         const page = await this.#browser.newPage();
         await login(page);
         log('New page is opned and logged in');
+        log('---------------------------------')
 
-        // Start the first `boostAProduct`
-        // this.boostAProduct(page);
+        // Start the first boost iteration
         this.AttempToBoostThisProduct(page);
         console.log('\n');
     }
@@ -121,24 +124,25 @@ class ProductBooster {
         const dropdownClickableSelector = `${this.createProductSelector()}  .product-action .shopee-dropdown button`;
         log(`'lainnya' button selector: ${dropdownClickableSelector} `);
         await page.click(dropdownClickableSelector);
-        await page.waitForTimeout(700); // Wait until dropdown animation completely finished.
+        await page.waitForTimeout(ProductBooster.SHORT_TIME); // Wait until dropdown animation completely finished.
 
         // Verify the `Naikan produk` (boost button) exist.
         const boostButtonSelector = `${this.createProductSelector()}  ${ProductBooster.generalBoosterButtonSelector}`;
         console.log(`boost button selector : ${boostButtonSelector}`);
         await page.waitForSelector(boostButtonSelector, { visible: true });
         // Wait a little more
-        await page.waitForTimeout(1000);
+        await page.waitForTimeout(ProductBooster.TINY_TIME);
         console.log(`boostButton is loaded / visible : ${boostButtonSelector}`);
 
         // Click the `Naikkan produk` link
         await page.click(boostButtonSelector);
+        await page.waitForTimeout(ProductBooster.TINY_TIME);
         log('"naikkan produk" button is clicked');
 
         // Click again to close the drop down
         await page.click(dropdownClickableSelector);
         // Wait so the dropdown's fade out animation completely finished
-        await page.waitForTimeout(600);
+        await page.waitForTimeout(ProductBooster.SHORT_TIME);
 
         // After effect
         this.#toNextProductIndex();
@@ -165,7 +169,6 @@ class ProductBooster {
 
         // Convert to number, in seconds, and get the greatest value (countdown timer)
         const greatest: number = timersValueString.reduce((acc, arr) => {
-            // const seconds: number = arr ? parseInt(arr[0]) : 0 * 60 * 60;
             const seconds: number = parseInt(arr ? arr[0] : '0') * 60 * 60
                 + parseInt(arr ? arr[1] : '0') * 60
                 + parseInt(arr ? arr[2] : '0');
@@ -183,7 +186,6 @@ class ProductBooster {
     async #calculateNextBoostFromNowToMatchInterval(page: Page): Promise<number> {
         // Get when the last timer will be off, then substract the time elapsed from `boostInterval`, so the distance between boost time little greater than `boostInterval`
         const greatestTimer = await this.#getTheGreatestCountdownTimerValueInSeconds(page);
-        // retgfc nnnurn greatestTimer + ProductBooster.boostInterval;
         const nextBoost = ProductBooster.boostInterval - (ProductBooster.boostedDuration - greatestTimer);
         if (nextBoost < 0) {
             log(`Next boost is negative : ${nextBoost}`);
@@ -198,7 +200,7 @@ class ProductBooster {
      * 
      * @return {number} Calculated timeout in seconds
      */
-    private calculateWhenAllowedToBoost(): number {
+    private calculateSecondsToHaveAvailableSlot(): number {
         // If boost slot is available, return minimum timeout
         if (this.#countdownDimersInSeconds.length < ProductBooster.maxBoostSlot) return 0;
 
@@ -213,10 +215,12 @@ class ProductBooster {
             await this.refreshPage(page);
 
             // On first run, set the starter product index
+            // This is not done in the `execute` method because the page load / refresh is done in this method.
             if (this.#nextIndexToBoost < 0) await this.setStarterProductIndex(page);
 
-            // Log product info
-            log(`Product #${this.#nextIndexToBoost + 1}, initiating boost sequence..`);
+            // Log info about this boot iteration
+            let now = new Date();
+            log(`${now.getHours()}:${now.getMinutes()}:${now.getSeconds()} - Product #${this.#nextIndexToBoost + 1}, initiating boost sequence..`);
 
             // Parse countdown timers & convert to seconds. The values will be used in this code block.
             await this.parseCountdownTimers(page);
@@ -247,7 +251,7 @@ class ProductBooster {
                 if (areCurrentBoostedProductsAtMaximumCapacity) {
                     console.log('Boosted products at maximum capacity');
                     // Schedule for the next attempt when the first / oldest countdown timer expires. & after `boostInterval` from the last countdownTimer.
-                    nextAttemptTimeout = Math.max(this.calculateWhenAllowedToBoost(), secondsToFulfillInterval);
+                    nextAttemptTimeout = Math.max(this.calculateSecondsToHaveAvailableSlot(), secondsToFulfillInterval);
                 } else if (!hasNowReachTheRequiredInterval) {
                     console.log('Not yet reach the required interval');
                     // Schedule the next attempt : after `boostInterval` on the last countdownTimer 
@@ -272,7 +276,6 @@ class ProductBooster {
             console.error(e);
             console.error('Oops, something is wrong. Will redo the attempt in 4 seconds');
             console.log('\n');
-
             // Try again
             setTimeout(() => {
                 this.AttempToBoostThisProduct(page);
@@ -321,7 +324,7 @@ class ProductBooster {
             }
             return starterIndex;
         }, ProductBooster.totalProductsToBoost, timerClass);
-        console.log(`### starter product index : ${this.#nextIndexToBoost}`);
+        log(`Product boost will start from product #${this.#nextIndexToBoost + 1}`);
     }
 }
 
