@@ -9,7 +9,8 @@ import 'dotenv/config';
 const login = async (page: Page) => {
     // TODO Login if needed
     await page.goto("https://seller.shopee.co.id", {
-        waitUntil: 'networkidle2',
+        // We only need to wait for the DOM to be loaded (`domcontentloaded`) than some network activity until completed (`networkidle2`).
+        waitUntil: 'domcontentloaded',
     });
 
     if (await isLoginFormExist(page)) {
