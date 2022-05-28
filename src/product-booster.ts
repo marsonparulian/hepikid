@@ -63,7 +63,9 @@ class ProductBooster {
     static generalCountdownTimerSelector: string = '.count-cool';
     // Selector for HTML element that holds 1 product by index (row / card).
     private createProductSelector(): string {
-        return `.product-list-card:nth-of-type(${this.#nextIndexToBoost + 1})`;
+        // Selector seems have changed
+        // return `.product-list-card:nth-of-type(${this.#nextIndexToBoost + 1})`;
+        return `.shopee-table__row:nth-of-type(${this.#nextIndexToBoost + 1})`;
     }
 
     constructor(browser: Browser) {
@@ -115,27 +117,37 @@ class ProductBooster {
 
         // Go to the product page 
         await page.goto('https://seller.shopee.co.id/portal/product/list/all');
-        await page.waitForSelector('.product-list-wrap');
+
+        // Class name of the product list page seems have changed
+        // await page.waitForSelector('.product-list-wrap');
+        await page.waitForSelector('.product-list-main');
         log('Product page is loaded');
     }
 
+
     private async clickTheBoostButton(page: Page): Promise<number> {
-        // Click `Lainnya` link (will triggerdropdown))
-        const dropdownClickableSelector = `${this.createProductSelector()}  .product-action .shopee-dropdown button`;
+        // The objective is to click the 'boost button', which contain inside a dropdown element of a specific product element.
+        // However after the dropdown element become visible, triggerred by clicking 'Lainnya' button, the dropdown element is no longer a child of the product element. 
+        // The dropdown element, including the booster button element, are moved to the buttom of the HTML DOM.
+        // Since moved, it is now harder to select the booster button element for the specific product.
+        // `page.waitForSelector(boosterSelector, {visible: true})` will wait for the first booster button (different product), on top of DOM, which is hidden. This will result in timeout error.
+        // The solution is to get reference to the booster button element while still inside the product element.
+        // Even after the dropdown element is moved, we will still be able to 'click' the booster button.
+
+        // Get reference to the booster button of the target product.
+        const boostButton = await page.$(`${this.createProductSelector()} ${ProductBooster.generalBoosterButtonSelector}`).catch((e: any) => {
+            console.error('Error finding boost button element');
+        });
+        if (!boostButton) throw new Error('Boost button is falsy');
+
+        // Click `Lainnya` button / link. This will show and move the dropdown element.
+        const dropdownClickableSelector = `${this.createProductSelector()} .product-action .shopee-dropdown button`;
         log(`'lainnya' button selector: ${dropdownClickableSelector} `);
         await page.click(dropdownClickableSelector);
         await page.waitForTimeout(ProductBooster.SHORT_TIME); // Wait until dropdown animation completely finished.
 
-        // Verify the `Naikan produk` (boost button) exist.
-        const boostButtonSelector = `${this.createProductSelector()}  ${ProductBooster.generalBoosterButtonSelector}`;
-        console.log(`boost button selector : ${boostButtonSelector}`);
-        await page.waitForSelector(boostButtonSelector, { visible: true });
-        // Wait a little more
-        await page.waitForTimeout(ProductBooster.TINY_TIME);
-        console.log(`boostButton is loaded / visible : ${boostButtonSelector}`);
-
-        // Click the `Naikkan produk` link
-        await page.click(boostButtonSelector);
+        // Click the `Naikkan produk` (booster button). 
+        await boostButton.click();
         await page.waitForTimeout(ProductBooster.TINY_TIME);
         log('"naikkan produk" button is clicked');
 
@@ -279,7 +291,7 @@ class ProductBooster {
             // Try again
             setTimeout(() => {
                 this.AttempToBoostThisProduct(page);
-            }, 5 * 60e3);
+            }, 50 * 60e3);
         }
     }
     private async parseCountdownTimers(page: Page) {
