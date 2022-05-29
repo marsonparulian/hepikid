@@ -79,6 +79,10 @@ class ProductBooster {
     async execute() {
         // Open new page & login
         const page = await this.#browser.newPage();
+
+        // Increase timeout to handle slow internet connection.
+        await page.setDefaultNavigationTimeout(50e3);
+
         await login(page);
         log('New page is opned and logged in');
         log('---------------------------------')
