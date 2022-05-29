@@ -82,6 +82,7 @@ class ProductBooster {
 
         // Increase timeout to handle slow internet connection.
         await page.setDefaultNavigationTimeout(50e3);
+        await page.setDefaultTimeout(50e3)
 
         await login(page);
         log('New page is opned and logged in');
