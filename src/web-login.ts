@@ -1,4 +1,4 @@
-import { Page } from "puppeteer"
+import puppeteer, { Page } from "puppeteer"
 import 'dotenv/config';
 
 // This file contains helpers to automate puppeteer's page login to Shoppee seller center
@@ -24,7 +24,21 @@ const login = async (page: Page) => {
 
 }
 const isLoginFormExist = async (page: Page): Promise<boolean> => {
+    // Note : This function is currently being debugged.
+    // The problem : If login form exist in browser, error `Execution context was destroyed` was occured. Otherwise no error was thrown..
+
+    console.log("Start to check login form");
     const loginFormsCount = await page.$$eval("form#shop-login", elements => elements.length);
+
+
+
+
+
+
+
+    console.log("After $$eval context execution");
+    console.log(loginFormsCount);
+    console.log("end of checking lgin form");
 
     return loginFormsCount > 0;
 }
