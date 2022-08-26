@@ -1,4 +1,4 @@
-import { Browser, Page } from "puppeteer";
+import puppeteer, { Browser, Page } from "puppeteer";
 import 'dotenv/config';
 import login from "./web-login";
 import { exit } from "process";
@@ -41,7 +41,6 @@ function printHourAndMinuteFromNow(offsetInSeconds = 0): string {
     return `${t.getHours()}:${t.getMinutes()}`;
 }
 class ProductBooster {
-    #browser: Browser;
     // Variables below represents a periode of time in milliseconds, Will be used such as for timeout to wait for animation or before `click`.
     static SHORT_TIME: number = 2e3; // e.g.: wait little animation
     static TINY_TIME: number = 7e2; //  e.g.: wait for element focus
@@ -68,8 +67,7 @@ class ProductBooster {
         return `.shopee-table__row:nth-of-type(${this.#nextIndexToBoost + 1})`;
     }
 
-    constructor(browser: Browser) {
-        this.#browser = browser;
+    constructor() {
     }
     /**
  * main function to 'execute' product booster functionality.
@@ -77,20 +75,9 @@ class ProductBooster {
  * @return {Promise<void>}
  */
     async execute() {
-        // Open new page & login
-        const page = await this.#browser.newPage();
-
-        // Increase timeout to handle slow internet connection.
-        await page.setDefaultNavigationTimeout(50e3);
-        await page.setDefaultTimeout(50e3)
-
-        await login(page);
-        log('New page is opned and logged in');
-        log('---------------------------------')
 
         // Start the first boost iteration
-        this.AttempToBoostThisProduct(page);
-        console.log('\n');
+        this.AttempToBoostThisProduct();
     }
     private isNoProductsCurrentlyBoosted(): boolean {
         const result = this.#countdownDimersInSeconds.length == 0;
@@ -226,13 +213,34 @@ class ProductBooster {
             return Math.min(acc, seconds);
         }, ProductBooster.boostedDuration);
     }
-    private async AttempToBoostThisProduct(page: Page) {
-        try {
-            // Refresh page to refresh the countdown timers to the real remaining time.
-            await this.refreshPage(page);
+    private async AttempToBoostThisProduct() {
+        // Launch browser & init a page
+        const browser = await puppeteer.launch({
+            // headless: process.env.BROWSER_HEADLESS ? true : false,
+            headless: false,
+            slowMo: 50, // slow down by 50ms 
+            userDataDir: "./user_data",
+        }).catch(e => {
+            console.error(e);
+        });
 
+        // Open a new page
+        if (!browser) throw new Error("Failed launching browser.");
+        const page = await browser.newPage();
+        // Increase timeout to handle slow internet connection.
+        await page.setDefaultNavigationTimeout(50e3);
+        await page.setDefaultTimeout(50e3)
+
+        await login(page);
+        log('New page is opened and logged in');
+        log('---------------------------------')
+
+        // Open new page & go to the product list page
+        await page.goto('https://seller.shopee.co.id/portal/product/list/all');
+        await page.waitForTimeout(ProductBooster.SHORT_TIME * 30);
+
+        try {
             // On first run, set the starter product index
-            // This is not done in the `execute` method because the page load / refresh is done in this method.
             if (this.#nextIndexToBoost < 0) await this.setStarterProductIndex(page);
 
             // Log info about this boot iteration
@@ -283,10 +291,16 @@ class ProductBooster {
 
             // Schedule the next attemp
             setTimeout(() => {
-                this.AttempToBoostThisProduct(page);
+                this.AttempToBoostThisProduct();
             }, nextAttemptTimeout * 1000);
 
             console.log(`Next boost attempt will be in ${printSeconds(nextAttemptTimeout)} (at ${printHourAndMinuteFromNow(nextAttemptTimeout)})`);
+
+            // Close this page & browser
+            await page.close();
+            await browser.close();
+            console.log("Page & browser is closed.");
+
             console.log('\n');
         } catch (e) {
             await screenshot(page, 'error_attempt-to-boost.png');
@@ -295,8 +309,8 @@ class ProductBooster {
             console.log('\n');
             // Try again
             setTimeout(() => {
-                this.AttempToBoostThisProduct(page);
-            }, 50 * 60e3);
+                this.AttempToBoostThisProduct();
+            }, 5 * 60e3);
         }
     }
     private async parseCountdownTimers(page: Page) {
