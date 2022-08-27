@@ -103,19 +103,6 @@ class ProductBooster {
 
         return result;
     }
-    private async refreshPage(page: Page) {
-        await page.goto('https://seller.shopee.co.id/portal/crm/overview');
-        await page.waitForTimeout(200);
-
-        // Go to the product page 
-        await page.goto('https://seller.shopee.co.id/portal/product/list/all');
-
-        // Class name of the product list page seems have changed
-        // await page.waitForSelector('.product-list-wrap');
-        await page.waitForSelector('.product-list-main');
-        log('Product page is loaded');
-    }
-
 
     private async clickTheBoostButton(page: Page): Promise<number> {
         // The objective is to click the 'boost button', which contain inside a dropdown element of a specific product element.
