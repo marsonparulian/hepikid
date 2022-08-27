@@ -237,7 +237,8 @@ class ProductBooster {
 
         // Open new page & go to the product list page
         await page.goto('https://seller.shopee.co.id/portal/product/list/all');
-        await page.waitForTimeout(ProductBooster.SHORT_TIME * 30);
+        await page.waitForSelector('.product-list-main');
+        // await page.waitForTimeout(ProductBooster.SHORT_TIME * 30);
 
         try {
             // On first run, set the starter product index
