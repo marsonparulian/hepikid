@@ -10,7 +10,8 @@ const login = async (page: Page) => {
     // TODO Login if needed
     await page.goto("https://seller.shopee.co.id", {
         // We only need to wait for the DOM to be loaded (`domcontentloaded`) than some network activity until completed (`networkidle2`).
-        waitUntil: 'domcontentloaded',
+        // waitUntil: 'domcontentloaded',
+        waitUntil: 'networkidle2',
     });
 
     if (await isLoginFormExist(page)) {
@@ -27,6 +28,7 @@ const isLoginFormExist = async (page: Page): Promise<boolean> => {
     // Note : This function is currently being debugged.
     // The problem : If login form exist in browser, error `Execution context was destroyed` was occured. Otherwise no error was thrown..
 
+    await page.screenshot({ path: 'logs/check-login-form.png' });
     console.log("Start to check login form");
     const loginFormsCount = await page.$$eval("form#shop-login", elements => elements.length);
 
@@ -59,6 +61,7 @@ const fillAndSubmitLoginForm = async (page: Page) => {
     console.log(`URL #30.png : ${await page.url()}`);
 
     // Click `send verification` button
+    // Note : this `send verification` button does not always appear (Rarely need to verify)
     const sendVerificationButtonSelector = '.WMREvW';
     await page.waitForSelector(sendVerificationButtonSelector);
     await page.click(sendVerificationButtonSelector);
