@@ -14,6 +14,9 @@ const login = async (page: Page) => {
         waitUntil: 'networkidle2',
     });
 
+    // We need to wait more, because if not logged in the page will be redirected  after 'networkidle2' above. The long wait time due to the possible long response from shopee.co.id.
+    await page.waitForTimeout(7000);
+
     if (await isLoginFormExist(page)) {
         console.log("Login form is detected. Will attempt to log in..");
 
@@ -25,18 +28,12 @@ const login = async (page: Page) => {
 
 }
 const isLoginFormExist = async (page: Page): Promise<boolean> => {
-    // Note : This function is currently being debugged.
-    // The problem : If login form exist in browser, error `Execution context was destroyed` was occured. Otherwise no error was thrown..
-
     await page.screenshot({ path: 'logs/check-login-form.png' });
     console.log("Start to check login form");
-    const loginFormsCount = await page.$$eval("form#shop-login", elements => elements.length);
 
-
-
-
-
-
+    // Note: There is a change in the login form HTML. Now we are going to identify the existence of a login form by whether password input is exist or not.
+    // const loginFormsCount = await page.$$eval("form#shop-login", elements => elements.length);
+    const loginFormsCount = await page.$$eval("[type='password']", elements => elements.length);
 
     console.log("After $$eval context execution");
     console.log(loginFormsCount);
