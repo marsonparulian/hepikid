@@ -52,7 +52,7 @@ const fillAndSubmitLoginForm = async (page: Page) => {
     await page.type('input[type="password"]', userPassword);
 
     // Submit
-    await page.click('form button');
+    await page.click('form button.wyhvVD');
     await page.waitForNavigation();
     await page.screenshot({ path: 'logs/screenshots/30.png' });
     console.log(`URL #30.png : ${await page.url()}`);
