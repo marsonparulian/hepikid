@@ -24,7 +24,7 @@
     "@swc/cli": "^0.1.57",
     "@types/puppeteer": "^5.4.5",
     "dotenv": "^16.0.0",
-    "puppeteer": "^13.5.2"
+    "puppeteer": "^20.5.0"
   },
   "devDependencies": {
     "@swc-node/register": "^1.4.2",
