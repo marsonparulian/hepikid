@@ -298,7 +298,10 @@ class ProductBooster {
             console.log(`Next boost attempt will be in ${printSeconds(nextAttemptTimeout)} (at ${printHourAndMinuteFromNow(nextAttemptTimeout)})`);
 
             // Close this page & browser
-            await page.close();
+            // Note: If we do `page.close()` will create error: `process PID 'xxxx' can not be found`.
+            // This error may be caused by the attempt to remove process during `browser.close()` that already removed during `page.close()`.
+            // The error started to occur after `puppeteer` has just been updated.
+            // await page.close();
             await browser.close();
             console.log("Page & browser is closed.");
 
