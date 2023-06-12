@@ -45,6 +45,8 @@ class ProductBooster {
     static MEDIUM_TIME: number = 4e3;  // e.g.: wait for browser operation to finish.
     static SHORT_TIME: number = 2e3; // e.g.: wait little animation
     static TINY_TIME: number = 7e2; //  e.g.: wait for element focus
+    // 'boostable' product indexes. Contain which products can be boosted by their order number in the web page.
+    #boostableProductIndexes: number[] = [];
     // Next product index to boost from list on web page. The value is set to `-1` to trigger function to find the starter index. The default value will be `0`;
     #nextIndexToBoost: number = -1;
     // Total products to boost
@@ -61,11 +63,14 @@ class ProductBooster {
     static generalBoosterButtonSelector: string = '.boost-button-text';
     // Selector for `countdownTimer` elements
     static generalCountdownTimerSelector: string = '.count-cool';
+    // Selector for HTML elements that contains each product
+    static productContainerSelector = '.shopee-table__row';
     // Selector for HTML element that holds 1 product by index (row / card).
     private createProductSelector(): string {
-        // Selector seems have changed
-        // return `.product-list-card:nth-of-type(${this.#nextIndexToBoost + 1})`;
         return `.shopee-table__row:nth-of-type(${this.#nextIndexToBoost + 1})`;
+        console.log(`Product row selector ++++`);
+        console.log(`.shopee-table__row:nth-of-type(${this.#nextIndexToBoost + 1})`);
+
     }
 
     constructor() {
@@ -229,6 +234,8 @@ class ProductBooster {
         // await page.waitForTimeout(ProductBooster.SHORT_TIME * 30);
 
         try {
+
+
             // On first run, set the starter product index
             if (this.#nextIndexToBoost < 0) await this.setStarterProductIndex(page);
 
@@ -238,6 +245,11 @@ class ProductBooster {
 
             // Parse countdown timers & convert to seconds. The values will be used in this code block.
             await this.parseCountdownTimers(page);
+
+            // Note: Not all products are 'bootable'. For instance: out-of-stock products.
+            // So we are going to hold the 'boostable' products by their occurances in the web page, skiping the non-boostable products.
+            // This values will be used to determine which product, by its order, to be boosted this time.
+            await this.generateBoostableProductIndexes(page);
 
             /*
             * This method basically try to answer below questions based on conditions :
@@ -321,6 +333,37 @@ class ProductBooster {
         this.#countdownDimersInSeconds.forEach(sec => {
             console.log(printSeconds(sec));
         });
+    }
+    /**
+     * Generate the 'boostable' product index by their appearance order in the web page.
+     * The boostableProductindexes is useful to determine the next product to be boosted, while skiping the non-boostable products (if any).
+     * @return Promise<void>
+     */
+    private async generateBoostableProductIndexes(page: Page): Promise<void> {
+        // Count the total products in theh web  page.
+        const totalProducts = await page.$$eval(ProductBooster.productContainerSelector, (elements: any[]) => elements.length);
+        console.log(`total products: ${totalProducts}`);
+
+        // Loop from the first product, to see if the product container element has boost button or countdown timer text.
+        // Stop the loop if ProductVooster.maxBoostSlot or the total available products has been reached.
+        this.#boostableProductIndexes = [];
+        for (let i = 0; i < totalProducts; i++) {
+            // Add the container if it has booster button or countdown timer text
+
+            // let found = await page.$(`.shopee-table__row:has(${ProductBooster.generalBoosterButtonSelector}):nth-of-type(${i + 1})`);
+            let found = await page.evaluate((selector) => {
+                const el = document.querySelector(selector);
+                if (el) return true;
+                return false;
+            }, `.shopee-table__row:has(${ProductBooster.generalBoosterButtonSelector}):nth-of-type(${i + 1})`);
+
+            if (found) this.#boostableProductIndexes.push(i);
+            // found = null;
+
+            // Stop if the range of products quantity to be boosted has been reached
+            if (this.#boostableProductIndexes.length >= ProductBooster.totalProductsToBoost) break;
+        }
+        console.log(`boostable product indexes : ${this.#boostableProductIndexes}`)
     }
     /**
      * Set the product index to start the whole boosting iteration.
