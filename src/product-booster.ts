@@ -238,8 +238,8 @@ class ProductBooster {
             // This values will be used to determine which product, by its order, to be boosted this time.
             await this.generateBoostableProductIndexes(page);
 
-            // On first run, set the starter product index
-            if (this.#nextIndexToBoost < 0) await this.setProductIndexToBoost(page);
+            // Set the index of the product to boost.
+            await this.setProductIndexToBoost(page);
 
             // Log info about this boot iteration
             let now = new Date();
