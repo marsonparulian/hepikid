@@ -382,7 +382,7 @@ class ProductBooster {
             for (let i = 1; i < bpi.length; i++) {
                 if (!elements[bpi[i]].classList.contains(timerClass)
                     && elements[bpi[i - 1]].classList.contains(timerClass)) {
-                    indexToBoost = i;
+                    indexToBoost = bpi[i];
                     break;
                 }
             }
