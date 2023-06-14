@@ -126,7 +126,6 @@ class ProductBooster {
 
         // Click `Lainnya` button / link. This will show and move the dropdown element.
         const dropdownClickableSelector = `${this.createProductSelector()} .product-action .shopee-dropdown button`;
-        log(`'lainnya' button selector: ${dropdownClickableSelector} `);
         await page.click(dropdownClickableSelector);
         await page.waitForTimeout(ProductBooster.SHORT_TIME); // Wait until dropdown animation completely finished.
 
