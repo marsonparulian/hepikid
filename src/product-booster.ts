@@ -97,7 +97,6 @@ class ProductBooster {
         const result = await page.$(`${this.createProductSelector()}  ${ProductBooster.generalCountdownTimerSelector}`) === null ? false : true;
 
         if (result) console.log('This product is currently boosted');
-        else console.log('This product is not boosted');
 
         return result;
     }
@@ -162,7 +161,6 @@ class ProductBooster {
             });
         });
         if (!timersValueString) timersValueString = [];
-        console.log(`timer value string: ${timersValueString}`);
 
         // Convert to number, in seconds, and get the greatest value (countdown timer)
         const greatest: number = timersValueString.reduce((acc, arr) => {
@@ -225,7 +223,6 @@ class ProductBooster {
         await page.setDefaultTimeout(50e3)
 
         await login(page);
-        log('New page is opened and logged in');
         log('---------------------------------')
 
         // Open new page & go to the product list page
@@ -243,7 +240,7 @@ class ProductBooster {
 
             // Log info about this boot iteration
             let now = new Date();
-            log(`${now.getHours()}:${now.getMinutes()}:${now.getSeconds()} - Product #${this.#nextIndexToBoost + 1}, initiating boost sequence..`);
+            log(`${now.getHours()}:${now.getMinutes()}:${now.getSeconds()} - Product #${this.#nextIndexToBoost}, initiating boost sequence..`);
 
             // Parse countdown timers & convert to seconds. The values will be used in this code block.
             await this.parseCountdownTimers(page);

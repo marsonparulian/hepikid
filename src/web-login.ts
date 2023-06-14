@@ -35,10 +35,6 @@ const isLoginFormExist = async (page: Page): Promise<boolean> => {
     // const loginFormsCount = await page.$$eval("form#shop-login", elements => elements.length);
     const loginFormsCount = await page.$$eval("[type='password']", elements => elements.length);
 
-    console.log("After $$eval context execution");
-    console.log(loginFormsCount);
-    console.log("end of checking lgin form");
-
     return loginFormsCount > 0;
 }
 const fillAndSubmitLoginForm = async (page: Page) => {
