@@ -140,15 +140,10 @@ class ProductBooster {
         // Wait so the dropdown's fade out animation completely finished
         await page.waitForTimeout(ProductBooster.SHORT_TIME);
 
-        // After effect
-        this.#toNextProductIndex();
         // Return the timeout for the next 'boost'
         return ProductBooster.boostInterval;
     }
 
-    #toNextProductIndex() {
-        this.#nextIndexToBoost = (this.#nextIndexToBoost + 1) % ProductBooster.totalProductsToBoost;
-    }
     /**
      * Get the greatest countdown timer, the last timer will reach 00:00, of the currently boosted products.
      * @return {number} Number of seconds until the last countdown timer is completed.
