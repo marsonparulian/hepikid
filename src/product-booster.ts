@@ -222,7 +222,10 @@ class ProductBooster {
         // Open new page & go to the product list page
         await page.goto('https://seller.shopee.co.id/portal/product/list/all');
         await page.waitForSelector('.product-list-main');
-        // await page.waitForTimeout(ProductBooster.SHORT_TIME * 30);
+        // Wait for products
+        await page.waitForSelector(ProductBooster.productContainerSelector);
+        // Wait a little more to make sure all products are loaded
+        await new Promise(r => setTimeout(r, ProductBooster.MEDIUM_TIME));
 
         try {
             // So we are going to hold the 'boostable' products by their occurances in the web page, skiping the non-boostable products.
