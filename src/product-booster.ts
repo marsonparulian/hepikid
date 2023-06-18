@@ -372,28 +372,32 @@ class ProductBooster {
 
         // Remove the `.` (dot) from the selector
         const timerClass = ProductBooster.generalCountdownTimerSelector.substring(1);
-        // Iterate through all `boostButton`
-        this.#nextIndexToBoost = await page.$$eval(ProductBooster.generalBoosterButtonSelector, (elements, arg1: unknown, arg2: unknown, bpi: number[]) => {
-            const limit = typeof (arg1) === 'number' ? arg1 : 33;
+        // Evaluate browser context to decide on which index to boost next
+        this.#nextIndexToBoost = await page.evaluate((boosterSelector: string, arg2: unknown, bpi: number[], productContainerSelector: string) => {
             const timerClass = typeof (arg2) === 'string' ? arg2 : 'count-cool';
 
-            console.log(`bpi: ${bpi}`);
-
-            // Lookup to `this.boostableProductIndexes`.
-            let indexToBoost = bpi[0];
+            // Decide which index to boost next based on the `boostableProductIndexes`
+            let indexToBoost = bpi[0];  // Default value
             for (let i = 1; i < bpi.length; i++) {
-                if (!elements[bpi[i]].classList.contains(timerClass)
-                    && elements[bpi[i - 1]].classList.contains(timerClass)) {
-                    indexToBoost = bpi[i];
+                const currIndex = bpi[i];
+                const prevIndex = bpi[i - 1];
+
+                const currBoosterButton = document.querySelector(`${productContainerSelector}:nth-of-type(${currIndex + 1}) ${boosterSelector}`);
+                const prevBoosterButton = document.querySelector(`${productContainerSelector}:nth-of-type(${prevIndex + 1}) ${boosterSelector}`);
+
+                // Index to boost is the index with the previous index is currently boosted (has countdown timer).
+                if (currBoosterButton && prevBoosterButton
+                    && !currBoosterButton?.classList.contains(timerClass)
+                    && prevBoosterButton.classList.contains(timerClass)) {
+                    indexToBoost = currIndex;
                     break;
                 }
+
             }
             return indexToBoost;
-        }, ProductBooster.totalProductsToBoost, timerClass, this.#boostableProductIndexes);
+        }, ProductBooster.generalBoosterButtonSelector, timerClass, this.#boostableProductIndexes, ProductBooster.productContainerSelector);
         log(`Product index to boost: #${this.#nextIndexToBoost}`);
     }
 }
-
-
 
 export default ProductBooster;
