@@ -66,13 +66,15 @@ class ProductBooster {
     // Selector for HTML elements that contains each product
     static productContainerSelector = '.shopee-table__row';
     // Selector for HTML element that holds 1 product by index (row / card).
-    private createProductSelector(): string {
+    private productContainerSelectorByIndex(): string {
         return `.shopee-table__row:nth-of-type(${this.#nextIndexToBoost + 1})`;
         console.log(`Product row selector ++++`);
         console.log(`.shopee-table__row:nth-of-type(${this.#nextIndexToBoost + 1})`);
 
     }
-
+    private moreButtonSelector = '.more-dropdown-menu';
+    private productActionsContainerSelector = '.last-cell';
+    private productListContainerSelector = '.product-list-main';
     constructor() {
     }
     /**
@@ -94,7 +96,7 @@ class ProductBooster {
         return result;
     }
     private async isThisProductCurrentlyBoosted(page: Page) {
-        const result = await page.$(`${this.createProductSelector()}  ${ProductBooster.generalCountdownTimerSelector}`) === null ? false : true;
+        const result = await page.$(`${this.productContainerSelectorByIndex()}  ${ProductBooster.generalCountdownTimerSelector}`) === null ? false : true;
 
         if (result) console.log('This product is currently boosted');
 
@@ -119,13 +121,13 @@ class ProductBooster {
         // Even after the dropdown element is moved, we will still be able to 'click' the booster button.
 
         // Get reference to the booster button of the target product.
-        const boostButton = await page.$(`${this.createProductSelector()} ${ProductBooster.generalBoosterButtonSelector}`).catch((e: any) => {
+        const boostButton = await page.$(`${this.productContainerSelectorByIndex()} ${ProductBooster.generalBoosterButtonSelector}`).catch((e: any) => {
             console.error('Error finding boost button element');
         });
         if (!boostButton) throw new Error('Boost button is falsy');
 
         // Click `Lainnya` button / link. This will show and move the dropdown element.
-        const dropdownClickableSelector = `${this.createProductSelector()} .product-action .shopee-dropdown button`;
+        const dropdownClickableSelector = `${this.productContainerSelectorByIndex()} .product-action .shopee-dropdown button`;
         await page.click(dropdownClickableSelector);
         await page.waitForTimeout(ProductBooster.SHORT_TIME); // Wait until dropdown animation completely finished.
 
@@ -221,13 +223,16 @@ class ProductBooster {
 
         // Open new page & go to the product list page
         await page.goto('https://seller.shopee.co.id/portal/product/list/all');
-        await page.waitForSelector('.product-list-main');
+        await page.waitForSelector(this.productListContainerSelector);
         // Wait for products
         await page.waitForSelector(ProductBooster.productContainerSelector);
         // Wait a little more to make sure all products are loaded
         await new Promise(r => setTimeout(r, ProductBooster.MEDIUM_TIME));
 
         try {
+            // View the product actions containers so the page will generate the DOM inside, including the boost buttons
+            await this.viewAllProductActionsContainers(page);
+
             // So we are going to hold the 'boostable' products by their occurances in the web page, skiping the non-boostable products.
             // This values will be used to determine which product, by its order, to be boosted this time.
             await this.generateBoostableProductIndexes(page);
@@ -288,6 +293,8 @@ class ProductBooster {
 
             console.log(`Next boost attempt will be in ${printSeconds(nextAttemptTimeout)} (at ${printHourAndMinuteFromNow(nextAttemptTimeout)})`);
 
+            await new Promise(r => setTimeout(r, 2e6));
+
             // Close this page & browser
             // Note: If we do `page.close()` will create error: `process PID 'xxxx' can not be found`.
             // This error may be caused by the attempt to remove process during `browser.close()` that already removed during `page.close()`.
@@ -330,7 +337,7 @@ class ProductBooster {
     }
     /**
      * Generate the 'boostable' product index by their appearance order in the web page.
-     * The boostableProductindexes is useful to determine the next product to be boosted, while skiping the non-boostable products (if any).
+     * The boostableProductindexes is useful to determine the next product to be boosted, while skipping the non-boostable products (if any).
      * @return Promise<void>
      */
     private async generateBoostableProductIndexes(page: Page): Promise<void> {
@@ -346,10 +353,14 @@ class ProductBooster {
 
             // let found = await page.$(`.shopee-table__row:has(${ProductBooster.generalBoosterButtonSelector}):nth-of-type(${i + 1})`);
             let found = await page.evaluate((selector) => {
+                console.log('marson');
+                console.log(selector);
                 const el = document.querySelector(selector);
                 if (el) return true;
                 return false;
-            }, `.shopee-table__row:has(${ProductBooster.generalBoosterButtonSelector}):nth-of-type(${i + 1})`);
+
+                // }, `.shopee-table__row:has(${ProductBooster.generalBoosterButtonSelector}):nth-of-type(${i + 1})`);
+            }, `${ProductBooster.productContainerSelector}:has(${ProductBooster.generalBoosterButtonSelector}):nth-of-type(${i + 1})`);
 
             if (found) this.#boostableProductIndexes.push(i);
             // found = null;
@@ -397,6 +408,29 @@ class ProductBooster {
             return indexToBoost;
         }, ProductBooster.generalBoosterButtonSelector, timerClass, this.#boostableProductIndexes, ProductBooster.productContainerSelector);
         log(`Product index to boost: #${this.#nextIndexToBoost}`);
+    }
+    /**
+     * Scroll each of the booster button containers into view for a moment,
+     * so it will generate a DOM hierarchy down to the booster button inside the booster button container.
+     * 
+     * TLDR; The purpose of this ProductBooster class is related to clicking the booser button or reading the remaining time int the `.boost-button-text`.
+     * However DOM hierarchies, which the boost button included, will only be generated if the container is visible in the view for a moment.
+     * Not all of the containers, `.last-cell`, contains 'rpoduct actions'. 
+     * However we are going to show all the containers, since there is no hints to tell which f the containers contain 'product actions'.
+*/
+    private async viewAllProductActionsContainers(page: Page): Promise<void> {
+        // Do the action in the browser context
+        await page.evaluate(async (containerSelector: string, duration: number) => {
+            const containers = document.querySelectorAll(containerSelector);
+
+            // Loop to make all the containers visible into the the view 
+            for (let i = 0; i < containers.length; i++) {
+                let cell: HTMLElement = containers[i] as HTMLElement;
+                cell.scrollIntoView();
+                // Wait a little
+                await new Promise(r => setTimeout(r, duration));
+            }
+        }, this.productActionsContainerSelector, ProductBooster.TINY_TIME);
     }
 }
 
