@@ -293,8 +293,6 @@ class ProductBooster {
 
             console.log(`Next boost attempt will be in ${printSeconds(nextAttemptTimeout)} (at ${printHourAndMinuteFromNow(nextAttemptTimeout)})`);
 
-            await new Promise(r => setTimeout(r, 2e6));
-
             // Close this page & browser
             // Note: If we do `page.close()` will create error: `process PID 'xxxx' can not be found`.
             // This error may be caused by the attempt to remove process during `browser.close()` that already removed during `page.close()`.
