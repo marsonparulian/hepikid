@@ -6,6 +6,7 @@
   "scripts": {
     "start": "npm run build && node dist/index.ts",
     "start:dev": "node -r @swc-node/register src/index.ts",
+    "start2:dev": "node -r @swc-node/register src/index2.ts",
     "build": "swc src -d dist",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

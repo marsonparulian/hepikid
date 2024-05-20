@@ -1,5 +1,24 @@
 # hepikid
+
+## Tentang Dokumen Ini
+
+Dokument ini berisi cara menginstall aplikasi, menjalankan aplikasi, dan cara update aplikasi.
+
+## Cara Menginstall Aplikasi
+>> sedang dikerjakan
+
+## Cara Menjalakan Aplikasi
+>> Akan dikerjakan
+
+## Car Update Aplikasi
+>> Akan dikerjakan
+
+## About
+
 Tools for Hepikid
+
+
+
 
 ## Install this app
 To install this app, do the following :
