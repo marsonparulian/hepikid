@@ -1,5 +1,8 @@
+import fs from 'fs';
+
 import s from './product-booster-static';
 import * as helper from './helper';
+import Logger from './logger';
 
 type ProductRow = {
     index: number, // The appeareance order index on the web page, top to down, starting from 0.
@@ -13,12 +16,23 @@ type ProductRow = {
  * - All time data and calculation will be done in unit  time of second .
  */
 class ProductBoosterV2 {
-    /**
-     * This function is called every time this app is started,
-     * meant to prepare values and set up the environment.
-     */
-    start() {
+    private storeId: string = '';
+    private logger: Logger;
+    // User data directory for cookies used by the browser. Will be generated one time at the `1`start`
+    private userDataPath: string = '';
+    constructor(storeId: string, logger: Logger) {
+        this.storeId = storeId;
+        this.logger = logger;
+    }
 
+    public static getStarter(storeId: string, logLevel: number = 5) {
+
+        return () => {
+            let logger = new Logger(logLevel);
+            let app = new ProductBoosterV2(storeId, logger);
+
+            app.run();
+        }
     }
     /**
      * Basically this function will answer 2 questions :
@@ -26,7 +40,12 @@ class ProductBoosterV2 {
      * 2. If 'Yes', which boost button need to be clicked ?
      * And then this function will schedule time to execute this function again, in relation to the answer of question 1.
      */
-    private async run() {
+    public async run() {
+        this.logger.info(`>>> Start boosting process for store : ${this.storeId}`);
+        await this.createUserDataFolderIfNeeded();
+
+        // Load username and password for the store from env variables
+
         // Launch browser and open web page
 
         // Login if required.
@@ -34,7 +53,7 @@ class ProductBoosterV2 {
         // Wait until page is completely loaded
 
         // Parse and index the required data from product list
-        let boostableProducts: ProductRow[] = await this.parseData();;
+        let boostableProducts: ProductRow[] = await this.parseData();
 
         // How many more seconds to 'boost' button ? Negative values represents the past, 0 value means 'now'. 
         let whenShouldBoost: number = this.whenShouldBoost();
@@ -52,9 +71,30 @@ class ProductBoosterV2 {
         // Schedule for the next run
         const timeoutForNextBoost: number = this.timeoutForNextBoost();
 
-        setTimeout(this.run, timeoutForNextBoost);
+        // setTimeout(this.run, timeoutForNextBoost);
+        setTimeout(ProductBoosterV2.getStarter(this.storeId, this.logger.getLevel()), timeoutForNextBoost * 1000);
         helper.log(`Next boost will be in ${helper.printSeconds(timeoutForNextBoost)}: ${helper.printHourAndMinuteFromNow(timeoutForNextBoost)}`);
         // Close browser
+    }
+    private getUserDataPath(): string {
+        return `./user_data/${this.storeId}`;
+    }
+    private async createUserDataFolderIfNeeded(): Promise<void> {
+        let userDataPath = this.getUserDataPath();
+        let isExists = fs.existsSync(userDataPath);
+        if (!isExists) {
+            this.logger.debug(`Can not find uer data directory : ${userDataPath}`);
+            this.logger.debug(`Trying to create user dadta folder..`);
+
+            // Create the folder
+            fs.mkdirSync(userDataPath, 0o744)
+            this.logger.debug(`User data folder has been created: ${userDataPath}`);
+
+        } else {
+            this.logger.debug(`User data folder already existed : ${userDataPath}`);
+        }
+        // Insert empty line to make the log easy to red.
+        this.logger.debug("");
     }
     private async parseData() {
 
@@ -71,7 +111,7 @@ class ProductBoosterV2 {
         return Promise.resolve();
     }
     private timeoutForNextBoost(): number {
-        return 52;
+        return 110; // seconds;
     }
 }
 
