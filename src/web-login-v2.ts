@@ -1,4 +1,4 @@
-import puppeteer, { Page } from "puppeteer"
+import puppeteer, { ElementHandle, Page } from "puppeteer"
 import 'dotenv/config';
 
 // This file contains helpers to automate puppeteer's page login to Shoppee seller center
@@ -9,7 +9,10 @@ import 'dotenv/config';
  *  Will do login process on web page, if shopee's login form is detected.
  * @version 2.0
   */
-const login = async (page: Page) => {
+const login = async (page: Page, storeId: string) => {
+    const userId = process.env[`${storeId}_USER_ID`] || "";
+    const userPass = process.env[`${storeId}_USER_PASS`] || "";
+
     // TODO Login if needed
     await page.goto("https://seller.shopee.co.id", {
         // We only need to wait for the DOM to be loaded (`domcontentloaded`) than some network activity until completed (`networkidle2`).
@@ -24,7 +27,7 @@ const login = async (page: Page) => {
         console.log("Login form is detected. Will attempt to log in..");
 
         // Login
-        await fillAndSubmitLoginForm(page);
+        await fillAndSubmitLoginForm(page, userId, userPass);
     } else {
         console.log('No login form s detected. Browser is already logged in');
     }
@@ -40,18 +43,15 @@ const isLoginFormExist = async (page: Page): Promise<boolean> => {
 
     return loginFormsCount > 0;
 }
-const fillAndSubmitLoginForm = async (page: Page) => {
-    const userId = process.env.USER_ID || "";
-    const userPassword = process.env.USER_PASSWORD || "";
+const fillAndSubmitLoginForm = async (page: Page, userId: string, userPassword: string) => {
+    // const userId = process.env.USER_ID || "";
+    // const userPassword = process.env.USER_PASSWORD || "";
 
     console.log(`user id & password : ${userId} - ${userPassword}`);
 
     // Fill the form
     await page.type('input[type="text"]', userId);
     await page.type('input[type="password"]', userPassword);
-
-    // Remove line below
-    // await new Promise( r => setTimeout(r, 132000));
 
     // Submit
     // await page.click('form button.wyhvVD');
@@ -62,40 +62,50 @@ const fillAndSubmitLoginForm = async (page: Page) => {
 
     // Click `send verification` button
     // Note : this `send verification` button does not always appear (Rarely need to verify)
+    // So instead of waiting for the selector, just wait for 8 seconds before trying to click the button.
+    await new Promise(r => setTimeout(r, 8e3));
     const sendVerificationButtonSelector = '.WMREvW';
-    await page.waitForSelector(sendVerificationButtonSelector);
-    await page.click(sendVerificationButtonSelector);
+    const sendVerificationButton = await page.$(sendVerificationButtonSelector);
+    if (sendVerificationButton) {
+        console.log('Send verification button is found');
+        sendVerificationButton.click();
 
-    await screenshot(page, '40.png');
-    console.log(`URL @40.png : ${await page.url()}`);
+        // Now continue to the next process
 
-    // Wait for some time and click `OK` button
-    await page.waitForTimeout(1000);
+        await screenshot(page, '40.png');
+        console.log(`URL @40.png : ${await page.url()}`);
 
-    await screenshot(page, '43.png');
-    console.log(`URL @43.png : ${await page.url()}`);
+        // Wait for some time and click `OK` button
+        await page.waitForTimeout(1000);
 
-    const [button] = await page.$x("//button[contains(., 'OK')]");
-    if (button) {
-        console.log("OK button is found !");
-        await button.click();
+        await screenshot(page, '43.png');
+        console.log(`URL @43.png : ${await page.url()}`);
 
+        const [button] = await page.$x("//button[contains(., 'OK')]");
+        if (button) {
+            console.log("OK button is found !");
+            await (button as ElementHandle<Element>).click();
+
+        } else {
+            console.log("OK Button is not found");
+        }
+
+        // we need to wait until user receive & click verify link on whatsapp.
+        // After verified by the user, the page will be directed to shopee seller's landing page.
+        // TODO Increase timeout to 70 seconds, and wait for selector of one of the elements on landing page.
+        await page.setDefaultNavigationTimeout(70e3);
+        await page.waitForNavigation({ waitUntil: 'networkidle2' });
+        await page.setDefaultNavigationTimeout(30e3);
+
+        await screenshot(page, '45.png');
+        console.log(`URL #45.png : ${await page.url()}`);
     } else {
-        console.log("OK Button is not found");
+        console.log('The send verification button is not found');
     }
 
-    // we need to wait until user receive & click verify link on whatsapp.
-    // After verified by the user, the page will be directed to shopee seller's landing page.
-    // TODO Increase timeout to 70 seconds, and wait for selector of one of the elements on landing page.
-    await page.setDefaultNavigationTimeout(70e3);
-    await page.waitForNavigation({ waitUntil: 'networkidle2' });
-    await page.setDefaultNavigationTimeout(30e3);
-
-    await screenshot(page, '45.png');
-    console.log(`URL #45.png : ${await page.url()}`);
-
+    // Wait until page is completely loaded (chance it may take some time if there is a login process)
+    await new Promise(r => setTimeout(r, 7e3));
 }
-
 
 function screenshot(page: Page, fName: string) {
 

@@ -1,10 +1,13 @@
 import fs from 'fs';
+import puppeteer, { Page } from 'puppeteer';
 
 import s from './product-booster-static';
 import * as helper from './helper';
 import Logger from './logger';
+import webLogin from './web-login-v2';
+import ProductBoosterWeb from './product-booster-web';
 
-type ProductRow = {
+export type ProductRow = {
     index: number, // The appeareance order index on the web page, top to down, starting from 0.
     countdown: null | number, // Number of seconds the product can be be boostable again. The value based on the countdown timer on each product. 'null' means the product does not have countdown timer.
 }
@@ -18,11 +21,13 @@ type ProductRow = {
 class ProductBoosterV2 {
     private storeId: string = '';
     private logger: Logger;
+    private web: ProductBoosterWeb;
     // User data directory for cookies used by the browser. Will be generated one time at the `1`start`
     private userDataPath: string = '';
     constructor(storeId: string, logger: Logger) {
         this.storeId = storeId;
         this.logger = logger;
+        this.web = new ProductBoosterWeb(logger);
     }
 
     public static getStarter(storeId: string, logLevel: number = 5) {
@@ -42,15 +47,20 @@ class ProductBoosterV2 {
      */
     public async run() {
         this.logger.info(`>>> Start boosting process for store : ${this.storeId}`);
+
         await this.createUserDataFolderIfNeeded();
 
-        // Load username and password for the store from env variables
-
         // Launch browser and open web page
+        await this.web.initPage(this.userDataPath);
 
         // Login if required.
+        await this.web.loginIfNeeded(this.storeId);
 
-        // Wait until page is completely loaded
+        // Go to product list page, and wait untill all scripts are loaded
+        await this.web.loadProductListPage();
+
+        // await this.goToProductListPageAndWait(page);
+        // Prepare the page so the page is ready 
 
         // Parse and index the required data from product list
         let boostableProducts: ProductRow[] = await this.parseData();
@@ -112,6 +122,10 @@ class ProductBoosterV2 {
     }
     private timeoutForNextBoost(): number {
         return 110; // seconds;
+    }
+    private async goToProductListPageAndWait(page: Page): Promise<void> {
+
+
     }
 }
 

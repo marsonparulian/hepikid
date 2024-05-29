@@ -1,4 +1,4 @@
-import puppeteer, { Page } from "puppeteer"
+import puppeteer, { ElementHandle, Page } from "puppeteer"
 import 'dotenv/config';
 
 // This file contains helpers to automate puppeteer's page login to Shoppee seller center
@@ -75,7 +75,7 @@ const fillAndSubmitLoginForm = async (page: Page) => {
     const [button] = await page.$x("//button[contains(., 'OK')]");
     if (button) {
         console.log("OK button is found !");
-        await button.click();
+        await (button as ElementHandle<Element>).click();
 
     } else {
         console.log("OK Button is not found");
