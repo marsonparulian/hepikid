@@ -477,8 +477,6 @@ class ProductBooster {
         const totalProducts = await page.$$eval(ProductBooster.productContainerSelector, (elements: any[]) => elements.length);
         console.log(`total products: ${totalProducts}`);
 
-
-
         // Loop from the first product, to see if the product container element has boost button or countdown timer text.
         // Stop the loop if ProductVooster.maxBoostSlot or the total available products has been reached.
         this.#boostableProductIndexes = [];

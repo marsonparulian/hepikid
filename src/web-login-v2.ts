@@ -57,7 +57,7 @@ const fillAndSubmitLoginForm = async (page: Page, userId: string, userPassword: 
     // await page.click('form button.wyhvVD');
     await page.click("form button.DYKctS");
     await page.waitForNavigation();
-    await page.screenshot({ path: 'logs/screenshots/30.png' });
+    // await page.screenshot({ path: 'logs/screenshots/30.png' });
     console.log(`URL #30.png : ${await page.url()}`);
 
     // Click `send verification` button

@@ -10,6 +10,8 @@ import ProductBoosterWeb from './product-booster-web';
 export type ProductRow = {
     index: number, // The appeareance order index on the web page, top to down, starting from 0.
     countdown: null | number, // Number of seconds the product can be be boostable again. The value based on the countdown timer on each product. 'null' means the product does not have countdown timer.
+    countdownString: string,
+    hasBoostButton: boolean,
 }
 /**
  * The objective of this class is to click 'boost' button' of a certain product in shopee product list every an interval of time.
@@ -26,6 +28,7 @@ class ProductBoosterV2 {
     private userDataPath: string = '';
     constructor(storeId: string, logger: Logger) {
         this.storeId = storeId;
+        this.userDataPath = `./user_data/${this.storeId}`;
         this.logger = logger;
         this.web = new ProductBoosterWeb(logger);
     }
@@ -48,6 +51,7 @@ class ProductBoosterV2 {
     public async run() {
         this.logger.info(`>>> Start boosting process for store : ${this.storeId}`);
 
+        // Make sure folder for cookies is exist
         await this.createUserDataFolderIfNeeded();
 
         // Launch browser and open web page
@@ -59,14 +63,11 @@ class ProductBoosterV2 {
         // Go to product list page, and wait untill all scripts are loaded
         await this.web.loadProductListPage();
 
-        // await this.goToProductListPageAndWait(page);
-        // Prepare the page so the page is ready 
-
         // Parse and index the required data from product list
-        let boostableProducts: ProductRow[] = await this.parseData();
+        let boostableProducts: ProductRow[] = await this.web.parseData();
 
         // How many more seconds to 'boost' button ? Negative values represents the past, 0 value means 'now'. 
-        let whenShouldBoost: number = this.whenShouldBoost();
+        let whenShouldBoost: number = this.whenShouldBoost(boostableProducts);
 
         // Click the boost button, if `whenShouldBoost` <= 0
         if (whenShouldBoost <= 0) {
@@ -81,16 +82,16 @@ class ProductBoosterV2 {
         // Schedule for the next run
         const timeoutForNextBoost: number = this.timeoutForNextBoost();
 
-        // setTimeout(this.run, timeoutForNextBoost);
         setTimeout(ProductBoosterV2.getStarter(this.storeId, this.logger.getLevel()), timeoutForNextBoost * 1000);
         helper.log(`Next boost will be in ${helper.printSeconds(timeoutForNextBoost)}: ${helper.printHourAndMinuteFromNow(timeoutForNextBoost)}`);
         // Close browser
+        this.web.closeBrowser();
     }
-    private getUserDataPath(): string {
-        return `./user_data/${this.storeId}`;
-    }
+    // private getUserDataPath(): string {
+    //     return `./user_data/${this.storeId}`;
+    // }
     private async createUserDataFolderIfNeeded(): Promise<void> {
-        let userDataPath = this.getUserDataPath();
+        let userDataPath = this.userDataPath;
         let isExists = fs.existsSync(userDataPath);
         if (!isExists) {
             this.logger.debug(`Can not find uer data directory : ${userDataPath}`);
@@ -106,18 +107,38 @@ class ProductBoosterV2 {
         // Insert empty line to make the log easy to red.
         this.logger.debug("");
     }
-    private async parseData() {
 
-        return [];
-    }
-    private whenShouldBoost(): number {
-        return 432;
+    private whenShouldBoost(boostableProducts: ProductRow[]): number {
+        // Initial value is 0 (second to boost).
+        let secondsToBoost = 0;
+
+        // Get the greatest countdown seconds, meaning it  is the last product being boosted.
+        // It should have value of 0 if there is no active countdown timer.
+        let greatestCt = boostableProducts.reduce((acc, pr) => {
+            if (!pr.countdown || pr.countdown < acc) return acc;
+            return pr.countdown;
+        }, 0);
+
+        // If there is any active countdown timer, count when should click the next boost button
+        if (greatestCt > 0) {
+            secondsToBoost = s.BOOST_INTERVAL - (s.BOOSTED_DURATION - greatestCt);
+        }
+
+        this.logger.info(`Next boost should be in ${helper.printSeconds(secondsToBoost)}`);
+        return secondsToBoost;
     }
     private nextIndexToBoost(): number {
-        return 42;
+        // Default is the first product 
+        let indexToBoost: number = 0;
+
+
+        this.logger.info(`Next index to boost: ${this.nextIndexToBoost}`);
+        return this.nextIndexToBoost;
     }
     private clickBoostButton(indexToBoost: number): Promise<void> {
-        // return new Promise(r => r("done"));
+        this.logger.debug("start to clclick the boost button");
+
+        this.logger.info(`Boost button #${this.nextIndexToBoost} has been clicked`);
         return Promise.resolve();
     }
     private timeoutForNextBoost(): number {
@@ -128,6 +149,8 @@ class ProductBoosterV2 {
 
     }
 }
+
+
 
 
 

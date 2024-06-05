@@ -3,42 +3,21 @@
  */
 class ProductBoosterStatics {
     // Constants below represent time in seconds.
-    static SHORT_TIME = 2e3;
-    static MEDIUM_TIME = 6e3;
+    // Time used for after effect of an simple action. Such as button click, or view scroll.
+    static SHORT_TIME = 500;
+    // Tiem used to wait for animation to to finish, etc
+    static MEDIUM_TIME = 4e3;
+    // Time used for such as : finish loading network, etc.
     static LONG_TIME = 12e3;
+    // Total products to boost
+    static TOTAL_PRODUCTS_TO_BOOST: number = 7;
+    // Maximum number of concurrently boosted products .
+    static MAX_BOOST_SLOTS: number = 5;
+    // How long the boostedproduct will last until can be boosted again (in seconds)
+    static BOOSTED_DURATION = 4 * 60 * 60; // 4 hours
+    // Boost interval, elapsed boost time between products, in seconds
+    static BOOST_INTERVAL: number = Math.ceil(ProductBoosterStatics.BOOSTED_DURATION / ProductBoosterStatics.MAX_BOOST_SLOTS);
 
-
-
-
-
-
-
-    // // Selector for `boosterButton` elements.
-    // static generalBoosterButtonSelector: string = '.boost-button-text';
-    // // Selector for `countdownTimer` elements
-    // static generalCountdownTimerSelector: string = '.count-cool';
-    // // Selector for HTML elements that contains each product
-    // static productContainerSelector = '.shopee-table__fix-body.shopee-table__fix-right .shopee-table__row';
-
-    // // CSS Selector for HTML element that holds 1 product by index (row / card).
-    // private productContainerByIndex(i: number): string {
-    //     return `${ProductBooster.productContainerSelector}:nth-of-type(${i + 1})`;
-    // }
-    // // CSS Selector for 'more dropdown menu' (the menu will appeared if 'Lainnya' button is clicked), for specific product by indexed.
-    // private cssMoreDropdownMenuByIndex(i: number): string {
-    //     return `${this.productContainerByIndex(i)} .more-dropdown-menu`;
-    // }
-    // // CSS Selector for the container of the next product to boost. 
-    // private productContainerSelectorForNextIndexToBoost(): string {
-    //     console.debug(`next index to boost: ${this.#nextIndexToBoost}`);
-    //     return `.shopee-table__row:nth-of-type(${this.#nextIndexToBoost + 1})`;
-    //     console.log(`Product row selector ++++`);
-    //     console.log(`.shopee-table__row:nth-of-type(${this.#nextIndexToBoost + 1})`);
-
-    // }
-    // private moreButtonSelector = '.more-dropdown-menu';
-    // private productActionsContainerSelector = '.last-cell';
-    // private productListContainerSelector = '.product-list-main';
 }
 
 export default ProductBoosterStatics;
