@@ -39,7 +39,12 @@ class ProductBoosterV2 {
             let logger = new Logger(logLevel);
             let app = new ProductBoosterV2(storeId, logger);
 
-            app.run();
+            try {
+                app.run();
+            } catch (e: any) {
+                console.error('Something is wrong..');
+                console.error(e);
+            }
         }
     }
     /**
@@ -72,24 +77,22 @@ class ProductBoosterV2 {
         // Click the boost button, if `whenShouldBoost` <= 0
         if (whenShouldBoost <= 0) {
             // Which boost button to be clicked ?
-            const nextIndexToBoost: number = this.nextIndexToBoost();
+            const nextIndexToBoost: number = this.findNextIndexToBoost(boostableProducts);
 
-            await this.clickBoostButton(nextIndexToBoost);
+            const isBoostingSuccess = await this.clickBoostButton(nextIndexToBoost);
+
+            // If boosting fail, retry again later
+            if (!isBoostingSuccess) whenShouldBoost = s.retryy_timeout;
+            // If success, the next boosting will fullfill the boosting interval
+            else whenShouldBoost = s.BOOST_INTERVAL;
         }
 
-
-
         // Schedule for the next run
-        const timeoutForNextBoost: number = this.timeoutForNextBoost();
-
-        setTimeout(ProductBoosterV2.getStarter(this.storeId, this.logger.getLevel()), timeoutForNextBoost * 1000);
-        helper.log(`Next boost will be in ${helper.printSeconds(timeoutForNextBoost)}: ${helper.printHourAndMinuteFromNow(timeoutForNextBoost)}`);
+        setTimeout(ProductBoosterV2.getStarter(this.storeId, this.logger.getLevel()), whenShouldBoost * 1000);
+        this.logger.info(`Next boost has been scheduled in ${helper.printSeconds(whenShouldBoost)}: ${helper.printHourAndMinuteFromNow(whenShouldBoost)}`);
         // Close browser
-        this.web.closeBrowser();
+        await this.web.closeBrowser();
     }
-    // private getUserDataPath(): string {
-    //     return `./user_data/${this.storeId}`;
-    // }
     private async createUserDataFolderIfNeeded(): Promise<void> {
         let userDataPath = this.userDataPath;
         let isExists = fs.existsSync(userDataPath);
@@ -127,23 +130,37 @@ class ProductBoosterV2 {
         this.logger.info(`Next boost should be in ${helper.printSeconds(secondsToBoost)}`);
         return secondsToBoost;
     }
-    private nextIndexToBoost(): number {
+    private findNextIndexToBoost(boostableProducts: ProductRow[]): number {
         // Default is the first product 
         let indexToBoost: number = 0;
 
+        // Iterate to find the next product index to boost
+        for (let i = 1; i < boostableProducts.length; i++) {
+            // Product to boost is the first product that is not being boosted and the previous product is currently boosted.
+            if (!boostableProducts[i].countdown && boostableProducts[i - 1].countdown) {
+                indexToBoost = boostableProducts[i].index;
+                break;
+            }
+        }
 
-        this.logger.info(`Next index to boost: ${this.nextIndexToBoost}`);
-        return this.nextIndexToBoost;
+        this.logger.info(`Next index to boost: ${indexToBoost}`);
+        return indexToBoost;
     }
-    private clickBoostButton(indexToBoost: number): Promise<void> {
-        this.logger.debug("start to clclick the boost button");
 
-        this.logger.info(`Boost button #${this.nextIndexToBoost} has been clicked`);
-        return Promise.resolve();
+    private async clickBoostButton(indexToBoost: number): Promise<boolean> {
+        this.logger.debug("start to click the boost button in ProductBoosterV2");
+        const isBoosterButtonClicked = await this.web.clickBoostButton(indexToBoost);
+
+        if (isBoosterButtonClicked) {
+            this.logger.info(`Boost button #${indexToBoost} has been clicked`);
+        } else {
+            this.logger.info(`Failed finding booster button in browser context`);
+        }
+        return isBoosterButtonClicked;
     }
-    private timeoutForNextBoost(): number {
-        return 110; // seconds;
-    }
+    // private timeoutForNextBoost111(): number {
+    //     return 110; // seconds;
+    // }
     private async goToProductListPageAndWait(page: Page): Promise<void> {
 
 

@@ -9,6 +9,8 @@ class ProductBoosterStatics {
     static MEDIUM_TIME = 4e3;
     // Time used for such as : finish loading network, etc.
     static LONG_TIME = 12e3;
+    // Seconds until boost retry if any errors occured.  
+    static retryy_timeout = 5 * 60; // 5 MINUTES;
     // Total products to boost
     static TOTAL_PRODUCTS_TO_BOOST: number = 7;
     // Maximum number of concurrently boosted products .

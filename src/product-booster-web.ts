@@ -43,18 +43,17 @@ class ProductBoosterWeb {
 
     }
     async initPage(userDataPath: string): Promise<void> {
-        this.logger.debug(`Will launch browser with user data: ${userDataPath}`);
+        this.logger.debug(`Launching browser with user data: ${userDataPath}`);
 
-        const browser = await puppeteer.launch({
+        this.browser = await puppeteer.launch({
             headless: false,
             slowMo: 50, // slow down by 50ms 
             userDataDir: "./user_data",
-            // userDataDir: userDataPath,
         });
 
         // Open a new page
-        if (!browser) throw new Error("Failed launching browser.");
-        this.page = await browser.newPage();
+        if (!this.browser) throw new Error("Failed launching browser.");
+        this.page = await this.browser.newPage();
         // Increase timeout to handle slow internet connection.
         await this.page.setDefaultNavigationTimeout(3 * s.LONG_TIME);
 
@@ -226,12 +225,74 @@ class ProductBoosterWeb {
 
         return seconds;
     }
-    async clickBoostButton(index: number): Promise<void> {
-
+    public async clickBoostButton(index: number): Promise<boolean> {
+        if (!this.page) throw new Error("'page' is falsy.");
+        this.logger.debug(`About to click boost button  index ${index}. Selector: ${this.cssMoreDropdownMenuByIndex(index)}`)
+        return this.page.evaluate(this.clickBoostButtonInBrowserContext, this.cssMoreDropdownMenuByIndex(index));
     }
+    private async clickBoostButtonInBrowserContext(dropDownSelectorWithIndex: string): Promise<boolean> {
+        let buttonsSelector = `${dropDownSelectorWithIndex} .shopee-popover__ref`;
+
+        let isBoosterButtonExist = false;
+
+        let buttons = document.querySelectorAll(`${buttonsSelector} `);
+
+
+        // Look for button with 'Naikkan produk' text
+        for (let i = 0; i < buttons.length; i++) {
+            let buttonText: string = buttons[i].textContent + "";
+            console.log(`button text: ${buttonText}`);
+
+            if (/\s*Naikkan\s+produk\s*/i.test(buttonText)) {
+
+                // Click the button
+                (buttons[i] as HTMLButtonElement).click();
+
+                isBoosterButtonExist = true;
+                break;
+            }
+
+        }
+        // if (isBoosterButtonExist) {
+        //     console.log("booster button is found");
+        // }
+
+        // await new Promise(r => setTimeout(r, 12e3));
+        return isBoosterButtonExist;
+    }
+    // private clickBoosterButtonInSpecificProduct(cssMoreDropdownMenu: string): boolean {
+    //     console.log('about to click booster button');
+    //     // let isBoosterButtonExist = false;
+
+    //     let buttonsSelector = `${cssMoreDropdownMenu} .shopee-popover__ref`;
+    //     // console.log(`button selector: ${buttonsSelector}`);
+    //     let buttons = document.querySelectorAll(`${buttonsSelector} `);
+    //     // console.log(`buttons length: ${buttons.length}`);
+
+    //     // Look for button with 'Naikkan produk' text
+    //     let isBoosterButtonClicked = false;
+    //     for (let i = 0; i < buttons.length; i++) {
+    //         let buttonText: string = buttons[i].textContent + "";
+
+    //         if (/\s*Naikkan\s+produk\s*/i.test(buttonText)) {
+    //             // isBoosterButtonExist = true;
+
+    //             // Click the button
+    //             (buttons[i] as HTMLButtonElement).click();
+    //             isBoosterButtonClicked = true;
+    //             break;
+    //         }
+
+    //     }
+    //     // if (isBoosterButtonExist) {
+    //     //     console.log("booster button is found");
+    //     // }
+    //     // return isBoosterButtonExist;
+    //     return isBoosterButtonClicked;
+    // }
     public async closeBrowser(): Promise<void> {
-        this.logger.info("Browser has been closed");
         await this.browser?.close();
+        this.logger.info("Browser has been closed");
     }
 }
 
