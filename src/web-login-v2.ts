@@ -21,7 +21,7 @@ const login = async (page: Page, storeId: string) => {
     });
 
     // We need to wait more, because if not logged in the page will be redirected  after 'networkidle2' above. The long wait time due to the possible long response from shopee.co.id.
-    await page.waitForTimeout(7000);
+    await new Promise(r => setTimeout(r, 7000));
 
     if (await isLoginFormExist(page)) {
         console.log("Login form is detected. Will attempt to log in..");
@@ -78,12 +78,13 @@ const fillAndSubmitLoginForm = async (page: Page, userId: string, userPassword: 
         console.log(`URL @40.png : ${await page.url()}`);
 
         // Wait for some time and click `OK` button
-        await page.waitForTimeout(1000);
+        await new Promise(r => setTimeout(r, 1e3));
 
         await screenshot(page, '43.png');
         console.log(`URL @43.png : ${await page.url()}`);
 
-        const [button] = await page.$x("//button[contains(., 'OK')]");
+        const xpath = "//button[contains(., 'OK')]";
+        const button = await page.waitForSelector(`::-p-xpath(${xpath})`);
         if (button) {
             console.log("OK button is found !");
             await (button as ElementHandle<Element>).click();
