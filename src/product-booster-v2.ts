@@ -6,6 +6,7 @@ import * as helper from './helper';
 import Logger from './logger';
 import webLogin from './web-login-v2';
 import ProductBoosterWeb from './product-booster-web';
+import { exit } from 'process';
 
 export type ProductRow = {
     index: number, // The appeareance order index on the web page, top to down, starting from 0.
@@ -35,15 +36,18 @@ class ProductBoosterV2 {
 
     public static getStarter(storeId: string, logLevel: number = 5) {
 
-        return () => {
+        return async () => {
             let logger = new Logger(logLevel);
             let app = new ProductBoosterV2(storeId, logger);
 
             try {
-                app.run();
+                await app.run();
             } catch (e: any) {
                 console.error('Something is wrong..');
                 console.error(e);
+
+                console.log("Now exiting application..");
+                exit();
             }
         }
     }
