@@ -8,31 +8,13 @@ import * as helper from "./helper";
  * This class deals with web and puppeteer.
  */
 class ProductBoosterWeb {
-    // static generalBoosterButtonSelector: string = '.boost-button-text';
     // Selector for `countdownTimer` elements
     static generalCountdownTimerSelector: string = '.count-cool';
-    // Selector for HTML elements that contains each (one) product. This selector is actually the container of action buttons for each product.
-    static productContainerSelector = '.shopee-table__fix-body.shopee-table__fix-right .shopee-table__row';
 
-    // // CSS Selector for HTML element that holds 1 product by index (row / card).
-    // private productContainerByIndex(i: number): string {
-    //     return `${ProductBooster.productContainerSelector}:nth-of-type(${i + 1})`;
-    // }
-    // // CSS Selector for 'more dropdown menu' (the menu will appeared if 'Lainnya' button is clicked), for specific product by indexed.
-    // private cssMoreDropdownMenuByIndex(i: number): string {
-    //     return `${this.productContainerByIndex(i)} .more-dropdown-menu`;
-    // }
-    // // CSS Selector for the container of the next product to boost. 
-    // private productContainerSelectorForNextIndexToBoost(): string {
-    //     console.debug(`next index to boost: ${this.#nextIndexToBoost}`);
-    //     return `.shopee-table__row:nth-of-type(${this.#nextIndexToBoost + 1})`;
-    //     console.log(`Product row selector ++++`);
-    //     console.log(`.shopee-table__row:nth-of-type(${this.#nextIndexToBoost + 1})`);
-
-    // }
-    // private moreButtonSelector = '.more-dropdown-menu';
-    static productActionsContainerSelector = '.last-cell';
-    // private productListContainerSelector = '.product-list-main';
+    // Each product in the table has 1 container for the action links. Those action container HTML elements are not within HTML element of the product list (table).
+    // We only gonna work with those containers, not using info of products outside of those action containers.
+    // Each of the containers has '.eds-table__row' and direct descendant of '.eds-table__fix-right' element. 
+    static productActionsContainerSelector = '.eds-table__fix-right .eds-table__row';
 
     private page: Page | undefined;
     private browser: Browser | undefined;
@@ -57,7 +39,6 @@ class ProductBoosterWeb {
         // Increase timeout to handle slow internet connection.
         await this.page.setDefaultNavigationTimeout(3 * s.LONG_TIME);
 
-
     }
     async loginIfNeeded(storeId: string): Promise<void> {
         if (!this.page) throw new Error('The page property is falsy. Maybe its uninitialized.');
@@ -72,7 +53,7 @@ class ProductBoosterWeb {
         await this.page.goto('https://seller.shopee.co.id/portal/product/list/all');
 
         // Wait for products
-        await this.page.waitForSelector(ProductBoosterWeb.productContainerSelector);
+        await this.page.waitForSelector(ProductBoosterWeb.productActionsContainerSelector);
 
         // Wait a little more to make sure all products are loaded
         await new Promise(r => setTimeout(r, s.MEDIUM_TIME));
@@ -85,8 +66,8 @@ class ProductBoosterWeb {
      * so it will generate a DOM hierarchy down to the booster button inside the booster button container.
      * 
      * TLDR; The purpose of this ProductBooster class is related to clicking the booser button or reading the remaining time int the `.boost-button-text`.
-     * However DOM hierarchies, which the boost button included, will only be generated if the container is visible in the view for a moment.
-     * Not all of the containers, `.last-cell`, contains 'rpoduct actions'. 
+     * However,the DOM hierarchies which the boost button included, will only be generated if the container is visible in the view for a moment.
+     * Not all of the containers, contains 'rproduct actions'. 
      * However we are going to show all the containers, since there is no hints to tell which f the containers contain 'product actions'.
 */
     private async viewAllProductActionsContainers(): Promise<void> {
@@ -111,7 +92,7 @@ class ProductBoosterWeb {
         if (!this.page) throw new Error('`page` property is falsy');
 
         // Count the total products in theh web  page.
-        const totalProducts = await this.page.$$eval(ProductBoosterWeb.productContainerSelector, (elements: any[]) => elements.length);
+        const totalProducts = await this.page.$$eval(ProductBoosterWeb.productActionsContainerSelector, (elements: any[]) => elements.length);
         this.logger.debug(`total products: ${totalProducts}`);
 
         // Loop from the first product, to see if the product container element has boost button or countdown timer text.
@@ -122,7 +103,7 @@ class ProductBoosterWeb {
             if (boostableProducts.length >= s.TOTAL_PRODUCTS_TO_BOOST) break;
 
             // Check if the current index has countdown timer element
-            let ctText = await this.page.evaluate(this.getCountdownTimerTextByIndexInBrowserContext, this.productContainerByIndex(i), ProductBoosterWeb.generalCountdownTimerSelector);
+            let ctText = await this.page.evaluate(this.getCountdownTimerTextByIndexInBrowserContext, this.productActionsContainerByIndex(i), ProductBoosterWeb.generalCountdownTimerSelector);
             // If countdown timer is found, this means this product is boostable. Then continue the loop.
             if (ctText) {
                 boostableProducts.push({
@@ -170,7 +151,6 @@ class ProductBoosterWeb {
     private getCountdownTimerTextByIndexInBrowserContext(containerSelector: string, countdownTimerSelector: string): string {
         let selector = `${containerSelector} ${countdownTimerSelector}`;
         let ctEl = document.querySelector(selector);
-        // console.log(ctEl);
 
         return ctEl?.textContent ? ctEl.textContent : "";
     }
@@ -180,13 +160,10 @@ class ProductBoosterWeb {
      * @param cssMoreDropdownMenu CSS selector for a specific product container.
      */
     private isBoosterButtonExistInSpecificProduct(cssMoreDropdownMenu: string): boolean {
-        // console.log('start checking booster button');
         let isBoosterButtonExist = false;
 
-        let buttonsSelector = `${cssMoreDropdownMenu} .shopee-popover__ref`;
-        // console.log(`button selector: ${buttonsSelector}`);
+        let buttonsSelector = `${cssMoreDropdownMenu}`;
         let buttons = document.querySelectorAll(`${buttonsSelector} `);
-        // console.log(`buttons length: ${buttons.length}`);
 
         // Look for button with 'Naikkan produk' text
         for (let i = 0; i < buttons.length; i++) {
@@ -203,13 +180,13 @@ class ProductBoosterWeb {
         }
         return isBoosterButtonExist;
     }
-    // CSS Selector for HTML element that holds 1 product by index (row / card).
-    private productContainerByIndex(i: number): string {
-        return `${ProductBoosterWeb.productContainerSelector}:nth-of-type(${i + 1})`;
+    // CSS Selector for HTML element that holds 1 product's actions container by index, as representation of products.
+    private productActionsContainerByIndex(i: number): string {
+        return `${ProductBoosterWeb.productActionsContainerSelector}:nth-of-type(${i + 1})`;
     }
     // CSS Selector for 'more dropdown menu' (the menu will appeared if 'Lainnya' button is clicked), for specific product by indexed.
     private cssMoreDropdownMenuByIndex(i: number): string {
-        return `${this.productContainerByIndex(i)} .more-dropdown-menu`;
+        return `${this.productActionsContainerByIndex(i)} .eds-dropdown`;
     }
     private convertCountdownTextToSeconds(ctText: string): number {
         // Parse format `h:m:s` to an array of 3.
@@ -227,69 +204,38 @@ class ProductBoosterWeb {
     }
     public async clickBoostButton(index: number): Promise<boolean> {
         if (!this.page) throw new Error("'page' is falsy.");
-        this.logger.debug(`About to click boost button  index ${index}. Selector: ${this.cssMoreDropdownMenuByIndex(index)}`)
+        this.logger.debug(`About to click boost button index ${index}. Selector: ${this.cssMoreDropdownMenuByIndex(index)}`)
         return this.page.evaluate(this.clickBoostButtonInBrowserContext, this.cssMoreDropdownMenuByIndex(index));
     }
     private async clickBoostButtonInBrowserContext(dropDownSelectorWithIndex: string): Promise<boolean> {
-        let buttonsSelector = `${dropDownSelectorWithIndex} .shopee-popover__ref`;
+        console.log('about to click boost button');
+        let buttonsSelector = `${dropDownSelectorWithIndex} .eds-popover__ref`;
 
         let isBoosterButtonExist = false;
 
         let buttons = document.querySelectorAll(`${buttonsSelector} `);
 
-
         // Look for button with 'Naikkan produk' text
         for (let i = 0; i < buttons.length; i++) {
             let buttonText: string = buttons[i].textContent + "";
-            console.log(`button text: ${buttonText}`);
+            console.log(`button text: ${buttonText}  >> `);
 
             if (/\s*Naikkan\s+produk\s*/i.test(buttonText)) {
 
                 // Click the button
                 (buttons[i] as HTMLButtonElement).click();
+                console.log('++ clicked');
+                console.log(buttons[i]);
 
                 isBoosterButtonExist = true;
                 break;
             }
 
         }
-        // if (isBoosterButtonExist) {
-        //     console.log("booster button is found");
-        // }
 
         // await new Promise(r => setTimeout(r, 12e3));
         return isBoosterButtonExist;
     }
-    // private clickBoosterButtonInSpecificProduct(cssMoreDropdownMenu: string): boolean {
-    //     console.log('about to click booster button');
-    //     // let isBoosterButtonExist = false;
-
-    //     let buttonsSelector = `${cssMoreDropdownMenu} .shopee-popover__ref`;
-    //     // console.log(`button selector: ${buttonsSelector}`);
-    //     let buttons = document.querySelectorAll(`${buttonsSelector} `);
-    //     // console.log(`buttons length: ${buttons.length}`);
-
-    //     // Look for button with 'Naikkan produk' text
-    //     let isBoosterButtonClicked = false;
-    //     for (let i = 0; i < buttons.length; i++) {
-    //         let buttonText: string = buttons[i].textContent + "";
-
-    //         if (/\s*Naikkan\s+produk\s*/i.test(buttonText)) {
-    //             // isBoosterButtonExist = true;
-
-    //             // Click the button
-    //             (buttons[i] as HTMLButtonElement).click();
-    //             isBoosterButtonClicked = true;
-    //             break;
-    //         }
-
-    //     }
-    //     // if (isBoosterButtonExist) {
-    //     //     console.log("booster button is found");
-    //     // }
-    //     // return isBoosterButtonExist;
-    //     return isBoosterButtonClicked;
-    // }
     public async closeBrowser(): Promise<void> {
         await this.browser?.close();
         this.logger.info("Browser has been closed");
