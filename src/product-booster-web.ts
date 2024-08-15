@@ -1,4 +1,4 @@
-import puppeteer, { Page, Browser } from 'puppeteer';
+import puppeteer, { Page, Browser, ElementHandle } from 'puppeteer';
 import s from './product-booster-static';
 import webLogin from './web-login-v2';
 import ProductBoosterV2, { ProductRow } from './product-booster-v2'
@@ -115,9 +115,9 @@ class ProductBoosterWeb {
                 continue;
             }
 
-            // Test if the current product (i) has 'boost button' by checking if it has 'Naikkan produk' text.
-            let isBoosterButtonFound = await this.page.evaluate(this.isBoosterButtonExistInSpecificProduct, this.cssMoreDropdownMenuByIndex(i));
-            if (isBoosterButtonFound) {
+            // Test if the current product (i) has booster button.
+            const boosterButton = await this.getBoosterButton(i);
+            if (boosterButton) {
                 boostableProducts.push({
                     index: i,
                     hasBoostButton: true,
@@ -155,30 +155,23 @@ class ProductBoosterWeb {
         return ctEl?.textContent ? ctEl.textContent : "";
     }
     /**
-     * This function to be executed within browser context.
-     * Check if a booster button exist inthe specific product container. Product index already contained in the CSS selector.
-     * @param cssMoreDropdownMenu CSS selector for a specific product container.
+     * Retrieve booster button for a specific product (by index in the web appearance order).
+     * If the booster button is not available, meaning either the product is currently boosted (countdown timer is hhown) or the product is not boostable.
+     * @param i - The order number the product appeared on web from top to down. 
+     * @returns -Puppeteer's `ElementHandle` of the booster button. Otherwise return null if the booster button is not available.
      */
-    private isBoosterButtonExistInSpecificProduct(cssMoreDropdownMenu: string): boolean {
-        let isBoosterButtonExist = false;
+    private async getBoosterButton(i: number): Promise<ElementHandle<Element> | null> {
+        if (!this.page) throw new Error("Page attribute is falsy");
 
-        let buttonsSelector = `${cssMoreDropdownMenu}`;
-        let buttons = document.querySelectorAll(`${buttonsSelector} `);
+        // Get all product action containers
+        let containers = await this.page.$$(ProductBoosterWeb.productActionsContainerSelector);
 
-        // Look for button with 'Naikkan produk' text
-        for (let i = 0; i < buttons.length; i++) {
-            let buttonText: string = buttons[i].textContent + "";
+        if (!containers[i]) throw new Error(`Container[${i}] is falsy`);
 
-            if (/\s*Naikkan\s+produk\s*/i.test(buttonText)) {
-                isBoosterButtonExist = true;
-                break;
-            }
+        // Find booster button within a specific  product actions container
+        let button = await containers[i].$('::-p-text(Naikkan Produk)');
 
-        }
-        if (isBoosterButtonExist) {
-            console.log("booster button is found");
-        }
-        return isBoosterButtonExist;
+        return button;
     }
     // CSS Selector for HTML element that holds 1 product's actions container by index, as representation of products.
     private productActionsContainerByIndex(i: number): string {
@@ -202,39 +195,14 @@ class ProductBoosterWeb {
 
         return seconds;
     }
-    public async clickBoostButton(index: number): Promise<boolean> {
+    public async clickBoostButton(index: number): Promise<void> {
         if (!this.page) throw new Error("'page' is falsy.");
         this.logger.debug(`About to click boost button index ${index}. Selector: ${this.cssMoreDropdownMenuByIndex(index)}`)
-        return this.page.evaluate(this.clickBoostButtonInBrowserContext, this.cssMoreDropdownMenuByIndex(index));
-    }
-    private async clickBoostButtonInBrowserContext(dropDownSelectorWithIndex: string): Promise<boolean> {
-        console.log('about to click boost button');
-        let buttonsSelector = `${dropDownSelectorWithIndex} .eds-popover__ref`;
 
-        let isBoosterButtonExist = false;
+        const boosterButton = await this.getBoosterButton(index);
+        if (!boosterButton) throw new Error(`Booster button index ${index} is not found`);
 
-        let buttons = document.querySelectorAll(`${buttonsSelector} `);
-
-        // Look for button with 'Naikkan produk' text
-        for (let i = 0; i < buttons.length; i++) {
-            let buttonText: string = buttons[i].textContent + "";
-            console.log(`button text: ${buttonText}  >> `);
-
-            if (/\s*Naikkan\s+produk\s*/i.test(buttonText)) {
-
-                // Click the button
-                (buttons[i] as HTMLButtonElement).click();
-                console.log('++ clicked');
-                console.log(buttons[i]);
-
-                isBoosterButtonExist = true;
-                break;
-            }
-
-        }
-
-        // await new Promise(r => setTimeout(r, 12e3));
-        return isBoosterButtonExist;
+        return await boosterButton.click();
     }
     public async closeBrowser(): Promise<void> {
         await this.browser?.close();
