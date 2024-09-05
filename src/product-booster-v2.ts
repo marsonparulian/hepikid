@@ -153,14 +153,12 @@ class ProductBoosterV2 {
 
     private async clickBoostButton(indexToBoost: number): Promise<boolean> {
         this.logger.debug("start to click the boost button in ProductBoosterV2");
-        const isBoosterButtonClicked = await this.web.clickBoostButton(indexToBoost);
+        await this.web.clickBoostButton(indexToBoost);
 
-        if (isBoosterButtonClicked) {
-            this.logger.info(`Boost button #${indexToBoost} has been clicked`);
-        } else {
-            this.logger.info(`Failed finding booster button in browser context`);
-        }
-        return isBoosterButtonClicked;
+        this.logger.info(`Boost button #${indexToBoost} has been told to be clicked`);
+
+        // NOTE always assumed the boosterButton has been clicked
+        return true;
     }
     // private timeoutForNextBoost111(): number {
     //     return 110; // seconds;

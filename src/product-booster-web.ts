@@ -4,6 +4,17 @@ import webLogin from './web-login-v2';
 import ProductBoosterV2, { ProductRow } from './product-booster-v2'
 import Logger from './logger';
 import * as helper from "./helper";
+
+/**
+ * This type hold `Element` from web that we need to interact with for each product.
+ * This type is created becaused in puppeteer we can not do `page.$` and `page.$$` to get same element twice. Somehow the elements in `page` will be reduced after we do `page.$` or `page.$$`.t seems will return different el 
+ */
+type ProductElements = {
+    container: ElementHandle<Element>,
+    moreButton: ElementHandle<Element>,  // Button to show pop up containing `boosterButton`
+    boosterButton: ElementHandle<Element> | null,    // If exists, meaning the product is boostable
+}
+
 /**
  * This class deals with web and puppeteer.
  */
@@ -15,6 +26,9 @@ class ProductBoosterWeb {
     // We only gonna work with those containers, not using info of products outside of those action containers.
     // Each of the containers has '.eds-table__row' and direct descendant of '.eds-table__fix-right' element. 
     static productActionsContainerSelector = '.eds-table__fix-right .eds-table__row';
+
+    // Hold sets of elements for each product. The elements will only acquired once from the `page` due to the fact `page.$` or `page.$$` will have different result on the next iteration.
+    private productElements: ProductElements[] = [];
 
     private page: Page | undefined;
     private browser: Browser | undefined;
@@ -91,42 +105,62 @@ class ProductBoosterWeb {
         this.logger.debug("start parsing product data");
         if (!this.page) throw new Error('`page` property is falsy');
 
+        //IMPORTANT: Do all `page.evaluate`, `page.$eval`, and `page.$$eval` first, then later do the 'get' oprations such as `page.$` and `page.$$`.
+        // It seems the  content of `page` will change after 'get' operation has been done.'
+        // To prove this, measure the length of the result of `page.$$('some-selector')`.
+
         // Count the total products in theh web  page.
         const totalProducts = await this.page.$$eval(ProductBoosterWeb.productActionsContainerSelector, (elements: any[]) => elements.length);
         this.logger.debug(`total products: ${totalProducts}`);
 
-        // Loop from the first product, to see if the product container element has boost button or countdown timer text.
-        // Stop the loop if ProductVooster.maxBoostSlot or the total available products has been reached.
-        let boostableProducts: ProductRow[] = [];
+        // Loop from the first product, to see if the product container element has countdown timer text.
+        let products: ProductRow[] = [];
         for (let i = 0; i < totalProducts; i++) {
-            // Stop if the range of products quantity to be boosted has been reached
-            if (boostableProducts.length >= s.TOTAL_PRODUCTS_TO_BOOST) break;
 
             // Check if the current index has countdown timer element
             let ctText = await this.page.evaluate(this.getCountdownTimerTextByIndexInBrowserContext, this.productActionsContainerByIndex(i), ProductBoosterWeb.generalCountdownTimerSelector);
-            // If countdown timer is found, this means this product is boostable. Then continue the loop.
-            if (ctText) {
-                boostableProducts.push({
-                    index: i,
-                    hasBoostButton: false,
-                    countdown: this.convertCountdownTextToSeconds(ctText),
-                    countdownString: ctText,
-                });
-                continue;
-            }
 
-            // Test if the current product (i) has booster button.
-            const boosterButton = await this.getBoosterButton(i);
-            if (boosterButton) {
-                boostableProducts.push({
-                    index: i,
-                    hasBoostButton: true,
-                    countdown: null,
-                    countdownString: "",
-                });
-                continue;
+            // Init all products, despite we don't know yet it is boostable or not, and attach the countdownTimer text. Later remove the not boostableProduct (product that doesn't have countdownTimer or boosterButton) and only keep product as much we want too boost 
+            products.push({
+                index: i,
+                hasBoostButton: false,
+                countdown: this.convertCountdownTextToSeconds(ctText),
+                countdownString: ctText,
+            });
+        }
+
+        // Now get all the productElements, start with the containers then loop
+        const productContainers = await this.page.$$(ProductBoosterWeb.productActionsContainerSelector);
+        this.logger.debug(`Total productContainers found: ${productContainers.length}`);
+        for (let i = 0; i < productContainers.length; i++) {
+
+            // Button to toggle pop up menu containing boosterButton
+            let moreButton = await productContainers[i].$('::-p-text(Lainnya)');
+            if (!moreButton) throw new Error(`moreButton can't be found for index ${i}`);
+
+            // The booster button
+            let boosterButton = await productContainers[i].$('::-p-text(Naikkan Produk)');
+
+            // Attach the elements
+            this.productElements.push({
+                container: productContainers[i],
+                moreButton,
+                boosterButton,
+            });
+        }
+
+        // Edit `boostableProducts` based on the existence of boosterButton
+        for (let i = 0; i < products.length; i++) {
+            if (this.productElements[i].boosterButton) {
+                products[i].hasBoostButton = true;
             }
         }
+
+        // IMPORTANT: Remove the products that are not boostable or over the number of products to be boosted
+        let boostableProducts = products.filter((v, i, arr) => {
+            return (v.hasBoostButton || v.countdownString);
+        }).slice(0, s.TOTAL_PRODUCTS_TO_BOOST);
+        console.log(`Total boostable products ${boostableProducts.length}`);
 
         // Debug
         this.logger.debug("");
@@ -154,25 +188,6 @@ class ProductBoosterWeb {
 
         return ctEl?.textContent ? ctEl.textContent : "";
     }
-    /**
-     * Retrieve booster button for a specific product (by index in the web appearance order).
-     * If the booster button is not available, meaning either the product is currently boosted (countdown timer is hhown) or the product is not boostable.
-     * @param i - The order number the product appeared on web from top to down. 
-     * @returns -Puppeteer's `ElementHandle` of the booster button. Otherwise return null if the booster button is not available.
-     */
-    private async getBoosterButton(i: number): Promise<ElementHandle<Element> | null> {
-        if (!this.page) throw new Error("Page attribute is falsy");
-
-        // Get all product action containers
-        let containers = await this.page.$$(ProductBoosterWeb.productActionsContainerSelector);
-
-        if (!containers[i]) throw new Error(`Container[${i}] is falsy`);
-
-        // Find booster button within a specific  product actions container
-        let button = await containers[i].$('::-p-text(Naikkan Produk)');
-
-        return button;
-    }
     // CSS Selector for HTML element that holds 1 product's actions container by index, as representation of products.
     private productActionsContainerByIndex(i: number): string {
         return `${ProductBoosterWeb.productActionsContainerSelector}:nth-of-type(${i + 1})`;
@@ -181,12 +196,12 @@ class ProductBoosterWeb {
     private cssMoreDropdownMenuByIndex(i: number): string {
         return `${this.productActionsContainerByIndex(i)} .eds-dropdown`;
     }
-    private convertCountdownTextToSeconds(ctText: string): number {
+    private convertCountdownTextToSeconds(ctText: string): number | null {
         // Parse format `h:m:s` to an array of 3.
         const parsedTime: string[] = ctText.match(/\d{2}/g) || [];
 
         // If the total numbers are not 3, something is wrong. 
-        if (parsedTime.length !== 3) throw new Error(`Parsed time should be 3 elements. Got: ${parsedTime}`);
+        if (parsedTime.length !== 3) return null
 
         // Convert to seconds
         const seconds: number = parseInt(parsedTime ? parsedTime[0] : '0') * 60 * 60
@@ -199,10 +214,16 @@ class ProductBoosterWeb {
         if (!this.page) throw new Error("'page' is falsy.");
         this.logger.debug(`About to click boost button index ${index}. Selector: ${this.cssMoreDropdownMenuByIndex(index)}`)
 
-        const boosterButton = await this.getBoosterButton(index);
-        if (!boosterButton) throw new Error(`Booster button index ${index} is not found`);
+        // Scroll to moreButton, click, and wait a little for animation to complete
+        const { moreButton, boosterButton } = this.productElements[index];
+        await moreButton.scrollIntoView();
+        await moreButton.click();
+        await new Promise(r => setTimeout(r, s.MEDIUM_TIME))
 
-        return await boosterButton.click();
+        // Scrool to boosterButton, then click
+        await boosterButton?.scrollIntoView();
+        await boosterButton?.click();
+        await new Promise(r => setTimeout(r, s.SHORT_TIME));
     }
     public async closeBrowser(): Promise<void> {
         await this.browser?.close();
